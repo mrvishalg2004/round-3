@@ -1,15 +1,18 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/utils/db';
 import EncryptedMessage from '@/models/EncryptedMessage';
-import { getIO, emitActiveMessageChanged } from '@/utils/socket';
+import { emitActiveMessageChanged } from '@/utils/socket';
 
-interface Params {
+type RouteParams = {
   params: {
     id: string;
   };
-}
+};
 
-export async function PUT(request: Request, { params }: Params) {
+export async function PUT(
+  request: NextRequest,
+  { params }: RouteParams
+) {
   try {
     await dbConnect();
     
