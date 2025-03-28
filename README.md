@@ -1,116 +1,84 @@
-# The Code Rush - Real-time Competitive Coding Game
+# Decryption Game
 
-A real-time competitive coding game built with Next.js, React, MongoDB, and Socket.IO where players compete to solve coding challenges for qualification to the next round.
+A real-time team-based cryptography challenge game where teams compete to decrypt messages.
 
 ## Features
 
-- 🎮 Real-time competitive coding challenge
-- 📊 Live leaderboard updates using Socket.IO
-- ⏱️ Countdown timer for each challenge
-- 🏆 Top 10 players qualification system
-- 🔄 Instant feedback on submissions
-- 📱 Responsive design for all devices
+- Real-time team competition with Socket.IO
+- Multiple encryption types (Caesar, Base64, Morse, Binary, etc.)
+- Admin panel for game management
+- Winner tracking and leaderboard
+- Message assignment system
+- Animated celebration effects
 
-## Tech Stack
+## Local Development
 
-- **Frontend**: React, TailwindCSS
-- **Backend**: Next.js API routes
-- **Database**: MongoDB
-- **Real-time**: Socket.IO
-- **Deployment**: Vercel
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Configure environment variables:
+   Create a `.env.local` file with:
+   ```
+   MONGODB_URI=mongodb+srv://rounds:rounds123@aiodysseyrounds.rr88p.mongodb.net/?retryWrites=true&w=majority&appName=AIODYSSEYRounds
+   ```
+4. Run the system check:
+   ```bash
+   npm run system-check
+   ```
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+6. Visit `http://localhost:8009` for the game and `http://localhost:8009/admin` for the admin panel.
 
-## Getting Started
+## Deploying to Vercel
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm or yarn
-- MongoDB (local or Atlas)
+- A [Vercel](https://vercel.com) account
+- The [Vercel CLI](https://vercel.com/cli) installed (optional for command-line deployment)
 
-### Installation
+### Deployment Steps
 
-1. Clone the repository
-```bash
-git clone https://github.com/yourusername/code-rush.git
-cd code-rush
-```
+1. **Set up Environment Variables**
+   - In your Vercel project settings, add the following environment variable:
+     - `MONGODB_URI`: Your MongoDB connection string
 
-2. Install dependencies
-```bash
-npm install
-# or
-yarn install
-```
+2. **Deploy via Vercel Dashboard**
+   - Push your code to a GitHub, GitLab, or Bitbucket repository
+   - Import the project in the Vercel dashboard
+   - Configure the environment variables
+   - Deploy
 
-3. Configure environment variables
-   - Rename `.env.local.example` to `.env.local`
-   - Add your MongoDB connection string
+3. **Deploy via Vercel CLI**
+   ```bash
+   # Login to Vercel
+   vercel login
 
-```
-MONGODB_URI=mongodb+srv://your_username:your_password@cluster.mongodb.net/code-rush
-```
+   # Deploy
+   vercel
+   ```
 
-4. Seed the database with initial problems
-```bash
-npm run seed
-# or
-yarn seed
-```
+4. **Production Deployment**
+   ```bash
+   vercel --prod
+   ```
 
-### Running the Application
+### Important Notes for Vercel Deployment
 
-#### Development Mode
-```bash
-npm run dev
-# or
-yarn dev
-```
+- Socket.IO functionality may be limited in serverless environments. Consider using [Vercel Edge Functions](https://vercel.com/features/edge-functions) or a third-party service like [Pusher](https://pusher.com/) for full real-time capabilities.
+- Database seeding should be done separately, either locally or through a dedicated endpoint protected by authentication.
 
-The application will start at http://localhost:3000
+## Admin Access
 
-#### Production Build
-```bash
-npm run build
-npm start
-# or
-yarn build
-yarn start
-```
+Access the admin panel at `/admin` with password: `admin123`
 
-## Deployment to Vercel
+## Tech Stack
 
-The easiest way to deploy this app is to use the [Vercel Platform](https://vercel.com).
-
-1. Push your code to a GitHub repository
-2. Import the project to Vercel
-3. Add your environment variables in the Vercel dashboard
-4. Deploy
-
-## Game Flow
-
-1. Players enter the game and see a coding problem with a famous quote
-2. They have a limited time to solve the problem
-3. The first 10 players with correct answers qualify for Round 3
-4. Real-time leaderboard shows current qualifiers and remaining slots
-5. When all 10 slots are filled, the game ends
-
-## Project Structure
-
-```
-code-rush/
-├── src/
-│   ├── app/               # Next.js App Router
-│   │   ├── api/           # API Routes
-│   │   ├── page.tsx       # Home page
-│   │   └── round3/        # Round 3 page for qualified players
-│   ├── components/        # React components
-│   ├── models/            # MongoDB models
-│   └── utils/             # Utility functions
-├── public/                # Static files
-├── .env.local             # Environment variables
-└── package.json           # Dependencies and scripts
-```
-
-## License
-
-This project is licensed under the MIT License
+- Next.js 15
+- React 19
+- MongoDB with Mongoose
+- Socket.IO for real-time features
+- Tailwind CSS for styling

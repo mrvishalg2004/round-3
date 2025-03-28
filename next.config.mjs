@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
+  reactStrictMode: false,
   // Ensure TypeScript errors don't fail build in production
   typescript: {
     // !! WARN !!
@@ -16,6 +16,11 @@ const nextConfig = {
   webpack: (config) => {
     config.externals = [...config.externals, 'bufferutil', 'utf-8-validate'];
     return config;
+  },
+  // Add required environmental variables for Vercel
+  env: {
+    MONGODB_URI: process.env.MONGODB_URI,
+    WEBSOCKET_SERVER_URL: process.env.WEBSOCKET_SERVER_URL || '',
   },
 };
 

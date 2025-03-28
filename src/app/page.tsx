@@ -37,15 +37,56 @@ export default function Home() {
           // Continue even if init fails - it might already be set up
         }
         
-        // Create socket connection
+        // Get the window location for dynamic socket connection
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}`;
+        
+        console.log(`Connecting to socket at: ${socketUrl}`);
+        
+        // Create socket connection with fallback options
         const socketInstance = io({
           path: '/api/socketio',
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          timeout: 20000,
+          transports: ['polling', 'websocket']
         });
 
         // Handle socket events
         socketInstance.on('connect', () => {
           console.log('Socket connected:', socketInstance.id);
           setSocket(socketInstance);
+        });
+
+        socketInstance.on('connect_error', (err) => {
+          console.error('Socket connection error:', err.message);
+          // If we're on Vercel, we might need to use polling only
+          if (window.location.hostname.includes('vercel.app')) {
+            console.log('Detected Vercel environment, retrying with polling transport');
+            // Close current socket
+            socketInstance.close();
+            
+            // Retry with polling only
+            const fallbackSocket = io({
+              path: '/api/socketio',
+              transports: ['polling'],
+              reconnectionAttempts: 3
+            });
+            
+            fallbackSocket.on('connect', () => {
+              console.log('Fallback socket connected with polling:', fallbackSocket.id);
+              setSocket(fallbackSocket);
+            });
+            
+            fallbackSocket.on('connect_error', (fallbackErr) => {
+              console.error('Fallback socket connection failed:', fallbackErr.message);
+              setError('Connection error. Real-time updates may not be available.');
+              // Still allow the app to function without real-time updates
+              setLoading(false);
+            });
+          }
         });
 
         socketInstance.on('disconnect', () => {
@@ -163,6 +204,7 @@ export default function Home() {
 
     return () => {
       if (socket) {
+        console.log('Cleaning up socket connection');
         socket.disconnect();
       }
     };

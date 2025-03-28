@@ -6,6 +6,8 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
+    "vercel-build": "next build",
+    "vercel-start": "next start",
     "lint": "next lint",
     "seed": "node seed-db.js",
     "direct-seed": "node src/utils/directSeed.js",
@@ -38,5 +40,8 @@
     "eslint-config-next": "15.2.4",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }
