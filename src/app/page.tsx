@@ -211,14 +211,46 @@ export default function Home() {
   }, []);
 
   // Function to handle enrolling in the game
-  const handleEnroll = (newTeamName: string, newEmail: string) => {
-    setTeamName(newTeamName);
-    setEmail(newEmail);
-    setEnrolled(true);
-    
-    // Store in local storage for persistence
-    localStorage.setItem('teamName', newTeamName);
-    localStorage.setItem('email', newEmail);
+  const handleEnroll = async (newTeamName: string, newEmail: string) => {
+    try {
+      setLoading(true);
+      
+      // Call the API to register the team
+      const response = await axios.post('/api/enroll', {
+        teamName: newTeamName,
+        email: newEmail
+      });
+      
+      console.log('Team registered:', response.data);
+      
+      // If registration was successful, update the local state
+      if (response.data.success) {
+        setTeamName(newTeamName);
+        setEmail(newEmail);
+        setEnrolled(true);
+        
+        // Store in local storage for persistence
+        localStorage.setItem('teamName', newTeamName);
+        localStorage.setItem('email', newEmail);
+        
+        // Join the team room in socket.io if socket exists
+        if (socket) {
+          socket.emit('joinTeam', { teamName: newTeamName });
+          console.log('Joined team room:', newTeamName);
+        }
+      } else {
+        // Show error if registration failed
+        setError(response.data.error || 'Failed to register team. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Error enrolling team:', err);
+      const errorMessage = err.response?.data?.error || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      // Reset enrollment to false in case of error
+      setEnrolled(false);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Function to handle game over

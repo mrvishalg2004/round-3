@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     // Check if it's a single team check
     const teamName = req.nextUrl.searchParams.get('teamName');
     if (teamName) {
-      const user = await User.findOne({ teamName }).select('teamName email enrolled isBlocked win lose qualified');
+      const user = await User.findOne({ teamName }).select('teamName email isBlocked');
       
       if (!user) {
         return NextResponse.json({
@@ -72,18 +72,15 @@ export async function GET(req: NextRequest) {
       }
       
       return NextResponse.json({
-        enrolled: user.enrolled,
+        enrolled: true,
         teamName: user.teamName,
         email: user.email,
-        isBlocked: user.isBlocked,
-        win: user.win,
-        lose: user.lose,
-        qualified: user.qualified
+        isBlocked: user.isBlocked
       });
     }
     
-    // Otherwise, return all enrolled teams
-    const users = await User.find({ enrolled: true }).select('teamName email qualified isBlocked win lose _id');
+    // Otherwise, return all teams
+    const users = await User.find({}).select('teamName email isBlocked _id');
     
     return NextResponse.json(users);
   } catch (error) {
