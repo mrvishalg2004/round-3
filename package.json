@@ -1,0 +1,42 @@
+{
+  "name": "code-rush",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "build": "next build",
+    "start": "NODE_ENV=production node server.js",
+    "lint": "next lint",
+    "seed": "node seed-db.js",
+    "direct-seed": "node src/utils/directSeed.js",
+    "seed-riddles": "node src/utils/riddles-seed.js",
+    "seed-encryption": "node src/utils/encryption-seed.js",
+    "local-init": "node src/utils/local-init.js",
+    "system-check": "node src/utils/system-check.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "dotenv": "^16.4.5",
+    "mongodb": "^5.9.2",
+    "mongodb-memory-server": "^8.16.1",
+    "mongoose": "^7.6.8",
+    "next": "15.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.5.2",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5",
+    "ts-node": "^10.9.2"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.2.4",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
