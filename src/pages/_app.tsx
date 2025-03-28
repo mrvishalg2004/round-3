@@ -1,9 +1,6 @@
 import { AppProps } from 'next/app';
-import '../app/globals.css';
 
-// Note: This is a fallback for Vercel deployment to ensure
-// the app can use both Pages Router and App Router as needed
-
+// This file is kept minimal to avoid conflicts with the App Router
 function MyApp({ Component, pageProps }: AppProps) {
   return <Component {...pageProps} />;
 }
