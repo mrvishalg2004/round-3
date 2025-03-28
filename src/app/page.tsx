@@ -135,7 +135,10 @@ export default function Home() {
           if (savedTeamName && data.teamName === savedTeamName) {
             if (data.isBlocked) {
               setIsBlocked(true);
-              alert(data.message || 'Your team has been blocked by an administrator.');
+              
+              // Show custom message if provided, otherwise show default message
+              const blockMessage = data.message || 'Your team has been blocked by an administrator.';
+              alert(blockMessage);
               
               // Clear local storage and reload after a delay
               setTimeout(() => {
@@ -143,6 +146,14 @@ export default function Home() {
                 localStorage.removeItem('email');
                 window.location.reload();
               }, 2000);
+            } else if (data.isBlocked === false) {
+              // Team has been unblocked
+              setIsBlocked(false);
+              
+              // Show unblock message if provided
+              if (data.message) {
+                alert(data.message);
+              }
             }
           }
         });

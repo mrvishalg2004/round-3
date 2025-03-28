@@ -265,6 +265,25 @@ export default function AdminPage() {
     }
   };
 
+  const unblockTeam = async (teamName: string) => {
+    try {
+      await axios.post('/api/admin/teams/unblock-by-name', {
+        teamName
+      });
+      fetchTeams();
+      toast.success(`Team "${teamName}" has been unblocked`, {
+        position: 'top-right',
+        autoClose: 3000
+      });
+    } catch (err) {
+      console.error('Error unblocking team:', err);
+      toast.error('Failed to unblock team', {
+        position: 'top-right',
+        autoClose: 3000
+      });
+    }
+  };
+
   const deleteTeam = async (teamId: string, teamName: string) => {
     if (confirm(`Are you sure you want to delete team "${teamName}"? This action cannot be undone.`)) {
       try {
@@ -652,6 +671,8 @@ export default function AdminPage() {
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Team Name</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Email</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Reason</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Created</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Action</th>
                     </tr>
                   </thead>
@@ -664,6 +685,16 @@ export default function AdminPage() {
                           <span className={`px-2 py-1 rounded-full text-xs font-bold ${team.isBlocked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
                             {team.isBlocked ? 'Blocked' : 'Active'}
                           </span>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {team.blockReason ? (
+                            <span className="text-xs">{team.blockReason}</span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <span>{formatDate(team.createdAt)}</span>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap flex space-x-2">
                           <button

@@ -1,0 +1,48 @@
+/* Add security-related styles at the end of the file */
+
+/* Disable context menu and text selection when in game mode */
+.fullscreen-game {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Prevent inspection with keyboard shortcuts */
+.fullscreen-game * {
+  -webkit-user-drag: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Make sure the fullscreen element takes up the entire screen */
+.fullscreen-element {
+  width: 100vw;
+  height: 100vh;
+  position: fixed;
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  z-index: 9999;
+  background-color: white;
+}
+
+/* Animation for warning messages */
+@keyframes warningPulse {
+  0% { background-color: rgba(253, 224, 71, 0.2); }
+  50% { background-color: rgba(253, 224, 71, 0.5); }
+  100% { background-color: rgba(253, 224, 71, 0.2); }
+}
+
+.security-warning {
+  animation: warningPulse 2s infinite;
+}
+
+/* Animation delays for loading indicators */
+.animation-delay-200 {
+  animation-delay: 0.2s;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+} 
