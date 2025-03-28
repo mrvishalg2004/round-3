@@ -23,4 +23,7 @@ yarn-error.log*
 
 # Local development files
 .DS_Store
-*.pem 
+*.pem
+
+# Conflicting files
+src/pages/index.tsx 
