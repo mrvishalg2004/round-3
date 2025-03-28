@@ -1,20 +1,23 @@
 # Node modules
 node_modules
 
+# Local environment
+.env.local
+.env.*.local
+
 # Build output
 .next
 
-# Local development
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Conflicting files
+src/pages/index.tsx
 
-# Server scripts
+# Server-specific files
 server.js
-test-message.js
-test-db-connection.js
+test-*.js
 seed-db.js
+
+# System files
+.DS_Store
 
 # Debug logs
 npm-debug.log*
@@ -22,8 +25,4 @@ yarn-debug.log*
 yarn-error.log*
 
 # Local development files
-.DS_Store
-*.pem
-
-# Conflicting files
-src/pages/index.tsx 
+*.pem 

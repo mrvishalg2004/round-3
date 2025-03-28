@@ -6,7 +6,7 @@
     "dev": "node server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
-    "vercel-build": "rm -rf src/pages/index.tsx && next build",
+    "vercel-build": "node vercel-build.js",
     "vercel-start": "next start",
     "lint": "next lint",
     "seed": "node seed-db.js",

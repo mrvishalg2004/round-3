@@ -1,1 +1,12 @@
-{} 
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "buildCommand": "mkdir -p ./vercel-tmp && find ./src/pages -name 'index.tsx' -exec rm -f {} \\; && next build"
+      }
+    }
+  ]
+} 
