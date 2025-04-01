@@ -82,6 +82,8 @@ export async function GET(req: NextRequest) {
       if (gameState) {
         response.gameStatus.active = gameState.active;
         response.gameStatus.isPaused = !!gameState.isPaused;
+        response.gameStatus.endTime = gameState.endTime;
+        response.gameStatus.remainingTime = gameState.pausedTimeRemaining;
       }
       
       // If game is not active, return early with waiting state

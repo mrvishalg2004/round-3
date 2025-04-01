@@ -241,6 +241,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
   useEffect(() => {
     const fetchGameState = async () => {
       try {
+        setLoading(true);
         const response = await axios.get('/api/game-state');
         const gameState = response.data.gameState;
         
@@ -251,6 +252,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         // If game is active, fetch the message
         if (gameState.active) {
           await fetchMessage();
+        } else {
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error fetching game state:', error);
@@ -285,6 +288,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         // If game is active, fetch the message
         if (data.active) {
           fetchMessage();
+        } else {
+          setLoading(false);
         }
       }
     });
@@ -451,11 +456,33 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     };
   }, [gameStatus?.active, isPaused, handleSecurityViolation]);
 
-  if (loading) {
+  // Modify the loading state check
+  if (loading && !isGameInitialized) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p className="text-gray-600">Loading the decryption challenge...</p>
+      </div>
+    );
+  }
+
+  // Show waiting screen when game is not initialized or not active
+  if (!isGameInitialized || !gameStatus?.active) {
+    return (
+      <div className="py-8">
+        <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
+          <p className="text-xl font-semibold mb-2">👋 Welcome to the Decryption Challenge!</p>
+          <p className="text-lg">Please wait for an administrator to start the game.</p>
+          <p className="mt-2 text-lg">The game will begin automatically when started.</p>
+        </div>
+        
+        <div className="flex justify-center mt-8">
+          <div className="animate-pulse flex space-x-3">
+            <div className="h-5 w-5 bg-blue-500 rounded-full"></div>
+            <div className="h-5 w-5 bg-blue-500 rounded-full animation-delay-200"></div>
+            <div className="h-5 w-5 bg-blue-500 rounded-full animation-delay-400"></div>
+          </div>
+        </div>
       </div>
     );
   }
