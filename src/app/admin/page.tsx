@@ -408,156 +408,97 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-indigo-800 text-white p-6 shadow-md">
-        <div className="container mx-auto">
-          <h1 className="text-3xl font-bold">Decryption Game Admin Panel</h1>
-          <p className="text-indigo-200 mt-1">Manage games, teams, and encrypted messages</p>
+    <div className="min-h-screen bg-gray-100 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">Admin Panel</h1>
+          
+          {/* Game Status Section */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Game Status</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Status:</p>
+                <p className={`text-lg font-semibold ${gameState?.active ? 'text-green-600' : 'text-red-600'}`}>
+                  {gameState?.active ? 'Active' : 'Inactive'}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Paused:</p>
+                <p className={`text-lg font-semibold ${gameState?.isPaused ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {gameState?.isPaused ? 'Yes' : 'No'}
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Winners:</p>
+                <p className="text-lg font-semibold text-blue-600">
+                  {winners.length || 0} / 3
+                </p>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <p className="text-sm text-gray-600">Time Remaining:</p>
+                <p className="text-lg font-semibold text-purple-600">
+                  {gameState?.remainingTime ? `${Math.floor(gameState.remainingTime / 1000)} seconds` : 'Not set'}
+                </p>
+              </div>
+            </div>
           </div>
-        </div>
-        
-      <div className="container mx-auto p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Game Controls */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4 text-gray-800">Game Controls</h2>
-            
-            {gameState && (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center border-b pb-2 border-gray-200">
-                  <span className="font-semibold text-gray-800 text-base">Game Status:</span>
-                  <span className={`px-3 py-1 rounded-full text-white font-bold ${gameState.active ? 'bg-green-600' : 'bg-red-600'}`}>
-                    {gameState.active ? 'Active' : 'Inactive'}
-                  </span>
-          </div>
-                
-                <div className="flex justify-between items-center border-b pb-2 border-gray-200">
-                  <span className="font-semibold text-gray-800 text-base">Timer Status:</span>
-                  <span className={`px-3 py-1 rounded-full text-white font-bold ${gameState.isPaused ? 'bg-yellow-600' : 'bg-blue-600'}`}>
-                    {gameState.isPaused ? 'Paused' : 'Running'}
-                      </span>
-                    </div>
-                
-                <div className="flex justify-between items-center border-b pb-2 border-gray-200">
-                  <span className="font-semibold text-gray-800 text-base">Start Time:</span>
-                  <span className="text-gray-800 font-medium">{formatDate(gameState.startTime)}</span>
-                </div>
-                
-                <div className="flex justify-between items-center border-b pb-2 border-gray-200">
-                  <span className="font-semibold text-gray-800 text-base">End Time:</span>
-                  <span className="text-gray-800 font-medium">{formatDate(gameState.endTime)}</span>
-                </div>
-                
-                <div className="flex space-x-4 mb-4">
-                  {!gameState.active ? (
-                    <>
-                  <button
-                    onClick={toggleGameState}
-                        className="flex-1 py-3 px-4 rounded font-bold text-white bg-green-600 hover:bg-green-700 shadow-sm"
-                      >
-                        <span className="flex items-center justify-center">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                          </svg>
-                          Start Game Only
-                        </span>
-                  </button>
-                      
-                  <button
-                        onClick={startGameWithTimer}
-                        className="flex-1 py-3 px-4 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
-                      >
-                        <span className="flex items-center justify-center">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          Start Game + Timer
-                        </span>
-                  </button>
-                    </>
-                  ) : (
-                    <>
-                  <button
-                        onClick={toggleGameState}
-                        className="flex-1 py-3 px-4 rounded font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm"
-                      >
-                        <span className="flex items-center justify-center">
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                          </svg>
-                          Stop Game
-                        </span>
-                  </button>
-                      
-                  <button
-                        onClick={togglePauseState}
-                        className={`flex-1 py-3 px-4 rounded font-bold text-white shadow-sm ${
-                          gameState.isPaused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'
-                        }`}
-                      >
-                        {gameState.isPaused ? (
-                          <span className="flex items-center justify-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            </svg>
-                            Resume Timer
-                          </span>
-                        ) : (
-                          <span className="flex items-center justify-center">
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Pause Timer
-                          </span>
-                        )}
-                  </button>
-                    </>
-                  )}
-                </div>
-                
-                <div className="flex space-x-4">
-                <button
-                    onClick={resetTimer}
-                    className={`flex-1 py-3 px-4 rounded font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-sm ${
-                      !gameState.active ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                    disabled={!gameState.active}
-                  >
-                    <span className="flex items-center justify-center">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Reset Timer (20 min)
-                    </span>
-                </button>
 
-                  <button
-                    onClick={resetGame}
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow-sm"
-                  >
-                    <span className="flex items-center justify-center">
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      Reset Game
-                    </span>
-                  </button>
-                </div>
-                
-                  <button
-                  onClick={fetchData}
-                  className="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 rounded font-bold text-gray-700 shadow-sm mt-4 border border-gray-300"
-                >
-                  <span className="flex items-center justify-center">
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                    Refresh Data
-                  </span>
+          {/* Game Controls */}
+          <div className="mb-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">Game Controls</h2>
+            <div className="flex flex-wrap gap-4">
+              <button
+                onClick={toggleGameState}
+                disabled={gameState?.active}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  gameState?.active
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                Start Game
+              </button>
+              <button
+                onClick={startGameWithTimer}
+                disabled={gameState?.active}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  gameState?.active
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                Start Game + Timer
+              </button>
+              <button
+                onClick={togglePauseState}
+                disabled={!gameState?.active || gameState?.isPaused}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  !gameState?.active || gameState?.isPaused
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-yellow-600 hover:bg-yellow-700'
+                }`}
+              >
+                Pause Game
+              </button>
+              <button
+                onClick={resetGame}
+                disabled={!gameState?.active}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  !gameState?.active
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-red-600 hover:bg-red-700'
+                }`}
+              >
+                End Game
+              </button>
+              <button
+                onClick={resetGame}
+                className="px-4 py-2 rounded-md text-white font-medium bg-gray-600 hover:bg-gray-700"
+              >
+                Reset Game
               </button>
             </div>
-            )}
           </div>
 
           {/* Encrypted Messages */}
