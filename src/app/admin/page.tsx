@@ -108,7 +108,7 @@ export default function AdminPage() {
       const response = await axios.get('/api/admin/teams');
       console.log('Teams API response:', response.data);
       setTeams(response.data.teams || []);
-    } catch (err) {
+        } catch (err) {
       console.error('Error fetching teams:', err);
     }
   };
@@ -123,7 +123,7 @@ export default function AdminPage() {
       if (active) {
         setActiveMessage(active._id);
       }
-    } catch (err) {
+        } catch (err) {
       console.error('Error fetching messages:', err);
     }
   };
@@ -290,7 +290,7 @@ export default function AdminPage() {
         await axios.delete(`/api/admin/teams/${teamId}`);
         alert(`Team "${teamName}" has been deleted successfully.`);
         fetchTeams();
-      } catch (err) {
+    } catch (err) {
         console.error('Error deleting team:', err);
         alert('Failed to delete team. Please try again.');
       }
@@ -367,7 +367,7 @@ export default function AdminPage() {
           autoClose: 3000
         });
       }
-    } catch (err) {
+          } catch (err) {
       console.error('Error resetting timer:', err);
       toast.error('Failed to reset the timer. Please try again.', {
         position: 'top-right',
@@ -380,7 +380,7 @@ export default function AdminPage() {
     return (
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+              </div>
     );
   }
 
@@ -389,19 +389,19 @@ export default function AdminPage() {
       <div className="min-h-screen bg-gray-100 flex justify-center items-center">
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
           <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">Admin Login</h1>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter admin password"
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter admin password"
             className="w-full p-2 border border-gray-300 rounded mb-4 text-gray-800 text-lg"
-          />
-          <button
+              />
+            <button
             onClick={handleLogin}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded text-base"
-          >
+            >
             Login
-          </button>
+            </button>
         </div>
       </div>
     );
@@ -413,9 +413,9 @@ export default function AdminPage() {
         <div className="container mx-auto">
           <h1 className="text-3xl font-bold">Decryption Game Admin Panel</h1>
           <p className="text-indigo-200 mt-1">Manage games, teams, and encrypted messages</p>
+          </div>
         </div>
-      </div>
-      
+        
       <div className="container mx-auto p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Game Controls */}
@@ -429,14 +429,14 @@ export default function AdminPage() {
                   <span className={`px-3 py-1 rounded-full text-white font-bold ${gameState.active ? 'bg-green-600' : 'bg-red-600'}`}>
                     {gameState.active ? 'Active' : 'Inactive'}
                   </span>
-                </div>
+          </div>
                 
                 <div className="flex justify-between items-center border-b pb-2 border-gray-200">
                   <span className="font-semibold text-gray-800 text-base">Timer Status:</span>
                   <span className={`px-3 py-1 rounded-full text-white font-bold ${gameState.isPaused ? 'bg-yellow-600' : 'bg-blue-600'}`}>
                     {gameState.isPaused ? 'Paused' : 'Running'}
-                  </span>
-                </div>
+                      </span>
+                    </div>
                 
                 <div className="flex justify-between items-center border-b pb-2 border-gray-200">
                   <span className="font-semibold text-gray-800 text-base">Start Time:</span>
@@ -451,8 +451,8 @@ export default function AdminPage() {
                 <div className="flex space-x-4 mb-4">
                   {!gameState.active ? (
                     <>
-                      <button
-                        onClick={toggleGameState}
+                  <button
+                    onClick={toggleGameState}
                         className="flex-1 py-3 px-4 rounded font-bold text-white bg-green-600 hover:bg-green-700 shadow-sm"
                       >
                         <span className="flex items-center justify-center">
@@ -461,9 +461,9 @@ export default function AdminPage() {
                           </svg>
                           Start Game Only
                         </span>
-                      </button>
+                  </button>
                       
-                      <button
+                  <button
                         onClick={startGameWithTimer}
                         className="flex-1 py-3 px-4 rounded font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-sm"
                       >
@@ -474,11 +474,11 @@ export default function AdminPage() {
                           </svg>
                           Start Game + Timer
                         </span>
-                      </button>
+                  </button>
                     </>
                   ) : (
                     <>
-                      <button
+                  <button
                         onClick={toggleGameState}
                         className="flex-1 py-3 px-4 rounded font-bold text-white bg-red-600 hover:bg-red-700 shadow-sm"
                       >
@@ -488,9 +488,9 @@ export default function AdminPage() {
                           </svg>
                           Stop Game
                         </span>
-                      </button>
+                  </button>
                       
-                      <button
+                  <button
                         onClick={togglePauseState}
                         className={`flex-1 py-3 px-4 rounded font-bold text-white shadow-sm ${
                           gameState.isPaused ? 'bg-blue-600 hover:bg-blue-700' : 'bg-yellow-600 hover:bg-yellow-700'
@@ -511,13 +511,13 @@ export default function AdminPage() {
                             Pause Timer
                           </span>
                         )}
-                      </button>
+                  </button>
                     </>
                   )}
                 </div>
                 
                 <div className="flex space-x-4">
-                  <button
+                <button
                     onClick={resetTimer}
                     className={`flex-1 py-3 px-4 rounded font-bold text-white bg-purple-600 hover:bg-purple-700 shadow-sm ${
                       !gameState.active ? 'opacity-50 cursor-not-allowed' : ''
@@ -530,8 +530,8 @@ export default function AdminPage() {
                       </svg>
                       Reset Timer (20 min)
                     </span>
-                  </button>
-                  
+                </button>
+
                   <button
                     onClick={resetGame}
                     className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded shadow-sm"
@@ -545,38 +545,38 @@ export default function AdminPage() {
                   </button>
                 </div>
                 
-                <button
+                  <button
                   onClick={fetchData}
                   className="w-full py-3 px-4 bg-gray-200 hover:bg-gray-300 rounded font-bold text-gray-700 shadow-sm mt-4 border border-gray-300"
                 >
                   <span className="flex items-center justify-center">
                     <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                </svg>
                     Refresh Data
                   </span>
-                </button>
-              </div>
+              </button>
+            </div>
             )}
           </div>
-          
+
           {/* Encrypted Messages */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-4">Encrypted Messages</h2>
             
             {messages.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-100">
+                  <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Type</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Difficulty</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Status</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Assigned Teams</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
                     {messages.map((message) => (
                       <tr key={message._id} className={message.active ? 'bg-blue-50' : ''}>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-800 font-medium">{message.encryptionType}</td>
@@ -584,8 +584,8 @@ export default function AdminPage() {
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold ${message.active ? 'bg-green-200 text-green-800' : 'bg-gray-200 text-gray-800'}`}>
                             {message.active ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
+                        </span>
+                      </td>
                         <td className="px-4 py-2">
                           {message.activeForTeams && message.activeForTeams.length > 0 ? (
                             <div className="max-h-16 overflow-y-auto">
@@ -596,15 +596,15 @@ export default function AdminPage() {
                                 ))}
                                 {message.activeForTeams.length > 3 && (
                                   <div className="font-medium">+{message.activeForTeams.length - 3} more...</div>
-                                )}
-                              </div>
-                            </div>
+                            )}
+                          </div>
+                          </div>
                           ) : (
                             <span className="text-xs text-gray-600 font-medium">No teams</span>
                           )}
-                        </td>
+                      </td>
                         <td className="px-4 py-2 whitespace-nowrap">
-                          <button
+                        <button
                             onClick={() => setMessageAsActive(message._id)}
                             disabled={message.active}
                             className={`py-1 px-3 rounded text-xs font-semibold ${
@@ -614,18 +614,18 @@ export default function AdminPage() {
                             }`}
                           >
                             {message.active ? 'Current' : 'Activate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             ) : (
               <p className="text-gray-700 font-medium">No encrypted messages found</p>
-            )}
-          </div>
-          
+          )}
+      </div>
+      
           {/* Winners */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-4">Winners</h2>
@@ -654,29 +654,29 @@ export default function AdminPage() {
             ) : (
               <p className="text-gray-700 font-medium">No winners yet</p>
             )}
-          </div>
-          
+        </div>
+
           {/* Teams */}
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-xl font-bold mb-4">Teams</h2>
             <div className="mb-2 text-sm text-gray-600">
               {teams.length > 0 ? `Found ${teams.length} teams` : 'No teams found'}
-            </div>
+          </div>
             
             {teams.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-100">
+                <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Team Name</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Email</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Status</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Reason</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Created</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-700 uppercase tracking-wider font-bold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
                     {teams.map((team) => (
                       <tr key={team._id} className={team.isBlocked ? 'bg-red-50' : ''}>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-800 font-semibold">{team.teamName}</td>
@@ -684,20 +684,20 @@ export default function AdminPage() {
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span className={`px-2 py-1 rounded-full text-xs font-bold ${team.isBlocked ? 'bg-red-200 text-red-800' : 'bg-green-200 text-green-800'}`}>
                             {team.isBlocked ? 'Blocked' : 'Active'}
-                          </span>
-                        </td>
+                      </span>
+                    </td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           {team.blockReason ? (
                             <span className="text-xs">{team.blockReason}</span>
                           ) : (
                             <span className="text-gray-400 text-xs">-</span>
                           )}
-                        </td>
+                    </td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span>{formatDate(team.createdAt)}</span>
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap flex space-x-2">
-                          <button
+                      <button
                             onClick={() => blockTeam(team.teamName)}
                             disabled={team.isBlocked || team.isAdmin}
                             className={`py-1 px-3 rounded text-xs font-semibold ${
@@ -707,28 +707,28 @@ export default function AdminPage() {
                             }`}
                           >
                             {team.isBlocked ? 'Blocked' : team.isAdmin ? 'Admin' : 'Block'}
-                          </button>
+                      </button>
                           
                           {!team.isAdmin && (
-                            <button
+                      <button
                               onClick={() => deleteTeam(team._id, team.teamName)}
                               className="py-1 px-3 rounded text-xs font-semibold bg-gray-700 text-white hover:bg-gray-800"
-                            >
-                              Delete
-                            </button>
+                      >
+                        Delete
+                      </button>
                           )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
             ) : (
               <p className="text-gray-700 font-medium">No teams found</p>
-            )}
-          </div>
-        </div>
+        )}
       </div>
+              </div>
+              </div>
       {/* Toast notifications container */}
       <Toaster />
     </div>

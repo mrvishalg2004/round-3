@@ -28,6 +28,8 @@ interface GameStatus {
   winnersCount: number;
   active: boolean;
   isPaused: boolean;
+  endTime: Date | null;
+  remainingTime: number | null;
 }
 
 interface SubmissionResult {
@@ -60,6 +62,9 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
   const gameContainerRef = useRef<HTMLDivElement>(null);
   const lastActiveTime = useRef<number>(Date.now());
   const warningCountRef = useRef<number>(0);
+
+  // Add new state for game initialization
+  const [isGameInitialized, setIsGameInitialized] = useState(false);
 
   // Handle entering fullscreen
   const enterFullscreen = useCallback(() => {
@@ -250,157 +255,53 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     }
   };
 
-  // Initial data fetch
+  // Modify the useEffect that fetches game state
   useEffect(() => {
-    fetchMessage();
-    
-    // Setup socket listeners for real-time updates
-    if (socket) {
-      socket.on('gameStatusChange', (data: any) => {
-        console.log('Game status changed:', data);
+    const fetchGameState = async () => {
+      try {
+        const response = await axios.get('/api/game-state');
+        const gameState = response.data.gameState;
         
-        if (data.type === 'newWinner') {
-          // Update winners count
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              winnersCount: prev.winnersCount + 1
-            };
-          });
+        // Only set game status if it's active or explicitly ended
+        if (gameState.active || gameState.endTime) {
+          setGameStatus(gameState);
+          setIsGameInitialized(true);
         }
-        
-        if (data.type === 'gameComplete') {
-          // All winners have been found
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              gameIsFull: true
-            };
-          });
-          onGameOver();
-        }
-
-        // Handle game start/stop events 
-        if (data.type === 'start') {
-          console.log('Game started by admin');
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              active: true,
-              isPaused: false
-            };
-          });
-        }
-
-        // Handle game stop events
-        if (data.type === 'stop') {
-          console.log('Game stopped by admin');
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              active: false
-            };
-          });
-        }
-
-        // Handle game pause/resume events
-        if (data.type === 'pause') {
-          console.log('Game paused by admin');
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              isPaused: true
-            };
-          });
-        }
-
-        if (data.type === 'resume') {
-          console.log('Game resumed by admin');
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              isPaused: false
-            };
-          });
-        }
-        
-        // Handle game reset events
-        if (data.type === 'reset') {
-          console.log('Game reset by admin');
-          // Refresh the message when game is reset
-          fetchMessage();
-          // Update game status
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              active: false,
-              isPaused: false,
-              winnersCount: 0,
-              gameIsFull: false
-            };
-          });
-        }
-
-        // Update game active state
-        if (data.active !== undefined) {
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              active: data.active
-            };
-          });
-        }
-
-        // Update game paused state
-        if (data.isPaused !== undefined) {
-          setGameStatus(prev => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              isPaused: data.isPaused
-            };
-          });
-        }
-      });
-
-      socket.on('activeMessageChanged', () => {
-        // Refresh the message when active message changes
-        console.log('Active message changed notification received');
-        fetchMessage();
-      });
-      
-      // Listen for team-specific message assignments
-      socket.on('teamMessageAssigned', (data: any) => {
-        if (data.teamName === teamName) {
-          console.log(`Team-specific message assigned: ${data.messageId}`);
-          fetchMessage();
-        }
-      });
-
-      // Join the team-specific room for targeted notifications
-      socket.emit('joinTeam', { teamName });
-      console.log(`Joined team room: ${teamName}`);
-      
-      // Request current game status when connecting
-      socket.emit('getGameStatus');
-    }
-    
-    return () => {
-      if (socket) {
-        socket.off('gameStatusChange');
-        socket.off('activeMessageChanged');
-        socket.off('teamMessageAssigned');
+      } catch (error) {
+        console.error('Error fetching game state:', error);
+        setError('Failed to fetch game state. Please refresh the page.');
       }
     };
-  }, [socket, teamName, onGameOver]);
+
+    fetchGameState();
+  }, []);
+
+  // Modify the socket event handler for game status changes
+  useEffect(() => {
+    if (!socket) return;
+
+    socket.on('gameStatusChange', (data) => {
+      console.log('Game status changed:', data);
+      
+      // Only update game status if it's a valid state change
+      if (data.type === 'update' || data.type === 'reset') {
+        setGameStatus(prev => ({
+          ...prev,
+          active: data.active,
+          endTime: data.endTime,
+          isPaused: data.isPaused,
+          remainingTime: data.remainingTime
+        }));
+        
+        // Set game as initialized when we receive the first valid state
+        setIsGameInitialized(true);
+      }
+    });
+
+    return () => {
+      socket.off('gameStatusChange');
+    };
+  }, [socket]);
 
   // Handle submission
   const handleSubmit = async (submittedText: string) => {
@@ -601,6 +502,23 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           <p className="text-lg">You violated the security rules multiple times.</p>
           <p className="mt-2 text-lg">The page will reload momentarily.</p>
         </div>
+      ) : !isGameInitialized ? (
+        // Show waiting screen when game is not initialized
+        <div className="py-8">
+          <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
+            <p className="text-xl font-semibold mb-2">👋 Welcome to the Decryption Challenge!</p>
+            <p className="text-lg">Please wait for an administrator to start the game.</p>
+            <p className="mt-2 text-lg">The game will begin automatically when started.</p>
+          </div>
+          
+          <div className="flex justify-center mt-8">
+            <div className="animate-pulse flex space-x-3">
+              <div className="h-5 w-5 bg-blue-500 rounded-full"></div>
+              <div className="h-5 w-5 bg-blue-500 rounded-full animation-delay-200"></div>
+              <div className="h-5 w-5 bg-blue-500 rounded-full animation-delay-400"></div>
+            </div>
+          </div>
+        </div>
       ) : (
         <>
           <div className="mb-4">
@@ -626,7 +544,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
             </div>
           )}
 
-          {!gameStatus.active ? (
+          {!gameStatus?.active ? (
             // Show waiting screen when game is not active
             <div className="py-8">
               <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
@@ -643,7 +561,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
                 </div>
               </div>
             </div>
-          ) : gameStatus.isPaused ? (
+          ) : isPaused ? (
             // Show paused screen when game is paused
             <div>
               <div className="bg-indigo-100 border-2 border-indigo-400 text-indigo-800 px-6 py-5 rounded-lg mb-6 text-center">
