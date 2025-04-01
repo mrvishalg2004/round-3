@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
 import { toast, Toaster } from 'react-hot-toast';
+import CountdownTimer from '@/components/CountdownTimer';
 
 interface Problem {
   _id: string;
@@ -437,9 +438,18 @@ export default function AdminPage() {
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <p className="text-sm text-gray-600">Time Remaining:</p>
-                <p className="text-lg font-semibold text-purple-600">
-                  {gameState?.remainingTime ? `${Math.floor(gameState.remainingTime / 1000)} seconds` : 'Not set'}
-                </p>
+                {gameState?.endTime ? (
+                  <div className="text-lg font-semibold text-purple-600">
+                    <CountdownTimer 
+                      endTime={new Date(gameState.endTime)}
+                      isPaused={gameState.isPaused || false}
+                      pausedTimeRemaining={gameState.pausedTimeRemaining}
+                      onTimeExpired={() => {}}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-lg font-semibold text-gray-600">Not set</p>
+                )}
               </div>
             </div>
           </div>

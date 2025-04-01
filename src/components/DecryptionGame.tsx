@@ -547,19 +547,23 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           </div>
           
           {/* Timer Display */}
-          {endTime && (
+          {gameStatus?.active && (
             <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 shadow-lg">
               <div className="text-center">
                 <h3 className="text-white text-lg font-semibold mb-2">Time Remaining</h3>
-                <div className="text-4xl font-bold text-white">
-                  <CountdownTimer 
-                    endTime={endTime} 
-                    isPaused={isPaused}
-                    pausedTimeRemaining={pausedTimeRemaining}
-                    onTimeExpired={onGameOver}
-                  />
-                </div>
-                {isPaused && (
+                {gameStatus.endTime ? (
+                  <div className="text-4xl font-bold text-white">
+                    <CountdownTimer 
+                      endTime={new Date(gameStatus.endTime)}
+                      isPaused={gameStatus.isPaused || false}
+                      pausedTimeRemaining={gameStatus.pausedTimeRemaining}
+                      onTimeExpired={onGameOver}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-white text-lg">Timer not set</p>
+                )}
+                {gameStatus.isPaused && (
                   <p className="text-white text-sm mt-2">⏸️ Game Paused</p>
                 )}
               </div>
