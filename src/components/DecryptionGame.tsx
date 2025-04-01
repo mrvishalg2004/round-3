@@ -262,10 +262,13 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         const response = await axios.get('/api/game-state');
         const gameState = response.data.gameState;
         
-        // Only set game status if it's active or explicitly ended
-        if (gameState.active || gameState.endTime) {
-          setGameStatus(gameState);
-          setIsGameInitialized(true);
+        // Set game status regardless of active state
+        setGameStatus(gameState);
+        setIsGameInitialized(true);
+        
+        // If game is active, fetch the message
+        if (gameState.active) {
+          await fetchMessage();
         }
       } catch (error) {
         console.error('Error fetching game state:', error);
@@ -295,6 +298,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         
         // Set game as initialized when we receive the first valid state
         setIsGameInitialized(true);
+        
+        // If game is active, fetch the message
+        if (data.active) {
+          fetchMessage();
+        }
       }
     });
 
@@ -461,9 +469,12 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
   }, [gameStatus?.active, isPaused, handleSecurityViolation]);
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-    </div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+        <p className="text-gray-600">Loading the decryption challenge...</p>
+      </div>
+    );
   }
 
   if (error) {

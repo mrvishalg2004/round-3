@@ -59,11 +59,11 @@ export async function GET(req: NextRequest) {
     // Prepare a response structure that will be used regardless of DB connectivity
     const response = {
       success: true,
-      message: FALLBACK_MESSAGE,
+      message: null,
       gameStatus: {
         gameIsFull: false,
         winnersCount: 0,
-        active: true,
+        active: false,
         isPaused: false
       }
     };
@@ -79,6 +79,12 @@ export async function GET(req: NextRequest) {
       if (gameState) {
         response.gameStatus.active = gameState.active;
         response.gameStatus.isPaused = !!gameState.isPaused;
+      }
+      
+      // If game is not active, return early with waiting state
+      if (!response.gameStatus.active) {
+        console.log('Game is not active, returning waiting state');
+        return NextResponse.json(response);
       }
       
       // If team name is provided and game is active, get/assign a message for this team
@@ -242,7 +248,7 @@ export async function GET(req: NextRequest) {
       gameStatus: {
         gameIsFull: false,
         winnersCount: 0,
-        active: true,
+        active: false,
         isPaused: false
       }
     });
