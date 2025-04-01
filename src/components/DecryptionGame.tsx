@@ -193,26 +193,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       
       console.log("Fetching encrypted message for team:", teamName);
       
-      // Add retry logic
-      let retries = 3;
-      let success = false;
-      let response;
-      
-      while (retries > 0 && !success) {
-        try {
-          response = await axios.get(`/api/encryption?teamName=${encodeURIComponent(teamName)}`);
-          success = true;
-        } catch (err) {
-          retries--;
-          if (retries === 0) throw err;
-          console.log(`Request failed, retrying... (${retries} attempts left)`);
-          await new Promise(resolve => setTimeout(resolve, 500)); // Wait before retry
-        }
-      }
-      
-      if (!response) {
-        throw new Error("Failed to fetch message after multiple attempts");
-      }
+      // Simplified fetch without retries
+      const response = await axios.get(`/api/encryption?teamName=${encodeURIComponent(teamName)}`);
       
       console.log("API response:", response.data);
       
@@ -273,6 +255,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       } catch (error) {
         console.error('Error fetching game state:', error);
         setError('Failed to fetch game state. Please refresh the page.');
+        setLoading(false);
       }
     };
 

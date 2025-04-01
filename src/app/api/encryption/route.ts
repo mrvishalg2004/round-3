@@ -73,8 +73,11 @@ export async function GET(req: NextRequest) {
       await dbConnect();
       console.log('Connected to database');
       
-      // Try to get game state
-      const gameState = await GameState.findOne({});
+      // Try to get game state and winners count in parallel
+      const [gameState, winnersCount] = await Promise.all([
+        GameState.findOne({}),
+        Winner.countDocuments()
+      ]);
       
       if (gameState) {
         response.gameStatus.active = gameState.active;
@@ -96,99 +99,37 @@ export async function GET(req: NextRequest) {
         
         if (teamMessage) {
           console.log(`Team ${teamName} has existing message assigned: ${teamMessage._id} (${teamMessage.encryptionType})`);
-        }
-        
-        // If no assigned message, assign a new one based on team name
-        if (!teamMessage) {
-          console.log(`No message assigned to team ${teamName}, assigning new message`);
-          
-          // Get all available messages
+        } else {
+          // If no assigned message, get a new one
           const availableMessages = await EncryptedMessage.find({});
           
           if (availableMessages.length > 0) {
-            console.log(`Found ${availableMessages.length} available messages to choose from`);
+            teamMessage = getMessageForTeam(availableMessages, teamName) || availableMessages[0];
             
+            // Assign the message to the team
+            await EncryptedMessage.findByIdAndUpdate(
+              teamMessage._id,
+              { $addToSet: { activeForTeams: teamName } }
+            );
+            
+            // Notify the team about their assigned message
             try {
-              // Get a message deterministically based on team name
-              teamMessage = getMessageForTeam(availableMessages, teamName);
-              
-              // Assign this message to the team
-              if (teamMessage) {
-                console.log(`Selected message "${teamMessage.encryptionType}" for team "${teamName}" based on hash`);
-                
-                await EncryptedMessage.findByIdAndUpdate(
-                  teamMessage._id,
-                  { $addToSet: { activeForTeams: teamName } }
-                );
-                
-                console.log(`Assigned message "${teamMessage.encryptionType}" to team "${teamName}"`);
-                
-                // Notify the team about their assigned message
-                try {
-                  emitTeamMessageAssigned(teamName, teamMessage._id.toString());
-                } catch (socketError) {
-                  console.error('Error emitting team message assignment:', socketError);
-                }
-              } else {
-                console.error(`Failed to select message for team ${teamName}, using first available`);
-                // Fallback to first message if hash method fails for any reason
-                teamMessage = availableMessages[0];
-                await EncryptedMessage.findByIdAndUpdate(
-                  teamMessage._id,
-                  { $addToSet: { activeForTeams: teamName } }
-                );
-              }
-            } catch (error) {
-              console.error("Error in message assignment:", error);
-              // Last resort fallback - use first message
-              teamMessage = availableMessages[0];
-              await EncryptedMessage.findByIdAndUpdate(
-                teamMessage._id,
-                { $addToSet: { activeForTeams: teamName } }
-              );
+              emitTeamMessageAssigned(teamName, teamMessage._id.toString());
+            } catch (socketError) {
+              console.error('Error emitting team message assignment:', socketError);
             }
           } else {
-            console.log('No messages available, falling back to active message');
-            
-            // Fallback to active message if no messages to shuffle
-            const activeMessage = await EncryptedMessage.findOne({ active: true });
-            
-            if (activeMessage) {
-              teamMessage = activeMessage;
-              console.log(`Using active message for team ${teamName}: ${activeMessage._id}`);
-              
-              await EncryptedMessage.findByIdAndUpdate(
-                activeMessage._id,
-                { $addToSet: { activeForTeams: teamName } }
-              );
-              
-              // Notify the team about their assigned message
-              try {
-                emitTeamMessageAssigned(teamName, activeMessage._id.toString());
-              } catch (socketError) {
-                console.error('Error emitting team message assignment:', socketError);
-              }
-            } else {
-              console.error('No active message found for fallback - creating one');
-              
-              // Last resort - no messages at all, create a default message
-              try {
-                const defaultMessage = await EncryptedMessage.create({
-                  originalText: "This is a test",
-                  encryptedText: "Wklv lv d whvw",
-                  encryptionType: "caesar",
-                  hint: "😂 Funny Hint: \"Imagine your keyboard got drunk and shifted every letter three places forward.\"",
-                  difficulty: "easy",
-                  active: true,
-                  activeForTeams: [teamName]
-                });
-                
-                teamMessage = defaultMessage;
-                console.log(`Created default message for team ${teamName}: ${defaultMessage._id}`);
-              } catch (createError) {
-                console.error('Failed to create default message:', createError);
-              }
-            }
+            // Fallback to active message or create a new one
+            teamMessage = await EncryptedMessage.findOne({ active: true }) || 
+              await EncryptedMessage.create({
+                originalText: "This is a test",
+                encryptedText: "Wklv lv d whvw",
+                encryptionType: "caesar",
+                hint: "😂 Funny Hint: \"Imagine your keyboard got drunk and shifted every letter three places forward.\"",
+                difficulty: "easy",
+                active: true,
+                activeForTeams: [teamName]
+              });
           }
         }
         
@@ -202,12 +143,7 @@ export async function GET(req: NextRequest) {
             encryptionType: teamMessage.encryptionType,
             active: true
           };
-          
-          console.log(`Serving message "${teamMessage.encryptionType}" to team "${teamName}"`);
         } else {
-          console.error(`Failed to find or assign message for team ${teamName}, using fallback`);
-          
-          // We couldn't find or assign a message, so use the fallback
           response.message = FALLBACK_MESSAGE;
         }
       } else if (!teamName) {
@@ -226,22 +162,17 @@ export async function GET(req: NextRequest) {
         }
       }
       
-      // Get winners count
-      const winnersCount = await Winner.countDocuments();
+      // Update game status with winners count
       response.gameStatus.winnersCount = winnersCount;
-      
-      const MAX_WINNERS = 3; // Adjust as needed
-      response.gameStatus.gameIsFull = winnersCount >= MAX_WINNERS;
+      response.gameStatus.gameIsFull = winnersCount >= 3; // MAX_WINNERS
       
     } catch (dbError) {
       console.error('Database error in encryption endpoint:', dbError);
-      // Continue with fallback message if DB fails
     }
     
     return NextResponse.json(response);
   } catch (error) {
     console.error('Error in encryption endpoint:', error);
-    // Even if there's an unexpected error, return the fallback message
     return NextResponse.json({
       success: true,
       message: FALLBACK_MESSAGE,
