@@ -69,15 +69,27 @@ export default function AdminPage() {
     };
   }, []);
 
+  // Add a useEffect that runs once on component mount to check for saved credentials
   useEffect(() => {
+    // Check if admin is already logged in
     const adminPwd = localStorage.getItem('adminPwd');
-    if (adminPwd === 'vishal@#7798' || password === 'vishal@#7798') {
+    if (adminPwd === 'vishal@#7798') {
+      console.log('Admin already authenticated via localStorage');
       setAuthenticated(true);
+      // Don't need to set password state since we're already authenticated
+    }
+    // Don't set loading to false here as the other useEffect will handle it
+  }, []);  // Empty dependency array means this runs once on mount
+
+  // This effect runs when authentication state changes
+  useEffect(() => {
+    if (authenticated) {
+      console.log('Admin is authenticated, fetching data');
       fetchData();
     } else {
       setLoading(false);
     }
-  }, [authenticated, password]);
+  }, [authenticated]);
 
   const fetchData = async () => {
     try {
@@ -142,8 +154,16 @@ export default function AdminPage() {
     if (password === 'vishal@#7798') {
       localStorage.setItem('adminPwd', password);
       setAuthenticated(true);
+      setPassword(''); // Clear password field after successful login
+      toast.success('Logged in successfully', {
+        position: 'top-right',
+        autoClose: 3000
+      });
     } else {
-      alert('Invalid password');
+      toast.error('Invalid password', {
+        position: 'top-right',
+        autoClose: 3000
+      });
     }
   };
 
@@ -490,6 +510,17 @@ export default function AdminPage() {
                 }`}
               >
                 Pause Game
+              </button>
+              <button
+                onClick={togglePauseState}
+                disabled={!gameState?.active || !gameState?.isPaused}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  !gameState?.active || !gameState?.isPaused
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                Resume Game
               </button>
               <button
                 onClick={resetGame}
