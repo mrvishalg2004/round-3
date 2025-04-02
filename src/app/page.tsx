@@ -92,6 +92,11 @@ export default function Home() {
         if (isNetlifyEnvironment()) {
           console.log('Using Netlify-optimized socket connection');
           socketInstance = initNetlifySocket(teamName);
+          
+          // For serverless environments, we'll also fetch game state directly
+          fetchGameState().catch(err => {
+            console.error('Error fetching initial game state in serverless mode:', err);
+          });
         } else {
           // Use standard socket connection for local development
           const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
@@ -155,14 +160,23 @@ export default function Home() {
           socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err.message);
             
-            // Only show error after a delay
+            // Use a delay-based approach instead of connection attempts
+            // This ensures users aren't shown an error immediately
             setTimeout(() => {
               if (!socket.connected) {
                 console.log('Socket still not connected after delay');
-                setError(`Connection error: ${err.message}. Please check that the server is running.`);
+                
+                // Provide different error messages based on environment
+                if (isNetlifyEnvironment()) {
+                  setError('Connection error: Unable to connect to game server. This might be due to Netlify serverless limitations. The game will function with limited real-time features.');
+                } else {
+                  setError(`Connection error: ${err.message}. Please check that the server is running.`);
+                }
+                
+                // We can still proceed with limited functionality
                 setLoading(false);
               }
-            }, 3000);
+            }, 5000); // Longer delay to allow for connection retries
           });
 
           socket.on('disconnect', (reason) => {

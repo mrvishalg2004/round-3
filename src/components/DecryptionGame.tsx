@@ -82,6 +82,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
   // Add socket connection status tracking
   const [isSocketConnected, setIsSocketConnected] = useState(false);
 
+  // Check if we're in a serverless environment (Netlify)
+  const isServerless = typeof window !== 'undefined' && 
+    (window.location.hostname.includes('netlify.app') || 
+     process.env.NEXT_PUBLIC_SERVERLESS_MODE === 'true');
+
   // Handle entering fullscreen
   const enterFullscreen = useCallback(() => {
     const element = gameContainerRef.current;
@@ -489,6 +494,53 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       window.removeEventListener('blur', handleBlur);
     };
   }, [gameStatus?.active, isPaused, handleSecurityViolation]);
+
+  // Add serverless fallback methods
+  const fetchGameStatusFromAPI = async () => {
+    if (!isServerless) return;
+    
+    try {
+      console.log('Fetching game status directly from API in serverless mode');
+      const response = await axios.get('/api/game-state');
+      if (response.data) {
+        setGameStatus({
+          active: response.data.active || false,
+          isPaused: response.data.isPaused || false,
+          endTime: response.data.endTime ? new Date(response.data.endTime) : null,
+          remainingTime: response.data.remainingTime || null,
+          pausedTimeRemaining: response.data.pausedTimeRemaining,
+          gameIsFull: response.data.gameIsFull || false,
+          winnersCount: response.data.winnersCount || 0
+        });
+        
+        if (response.data.active) {
+          fetchMessage();
+        } else {
+          setLoading(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching game status from API:', error);
+      setLoading(false);
+    }
+  };
+
+  // Polling for serverless environment
+  useEffect(() => {
+    if (!isServerless || !teamName) return;
+    
+    console.log('Setting up polling for serverless environment');
+    
+    // Initial fetch
+    fetchGameStatusFromAPI();
+    
+    // Set up polling interval
+    const interval = setInterval(() => {
+      fetchGameStatusFromAPI();
+    }, 10000); // Poll every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [teamName, isServerless]);
 
   // Update the loading state check
   if (loading && !isGameInitialized) {
