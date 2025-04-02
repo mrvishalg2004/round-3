@@ -29,16 +29,6 @@ export default function Home() {
 
     const initSocket = async () => {
       try {
-        setLoading(true);
-        
-        // Initialize the game (setup database if needed)
-        try {
-          await axios.get('/api/init');
-        } catch (err) {
-          console.error('Init API error:', err);
-          // Continue even if init fails - it might already be set up
-        }
-        
         // Get the window location for dynamic socket connection
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const host = window.location.host;
@@ -62,13 +52,13 @@ export default function Home() {
           console.log('Socket connected:', socketInstance.id);
           setSocket(socketInstance);
           setError(null); // Clear any connection errors
+          setLoading(false); // Set loading to false when socket connects
         });
 
         socketInstance.on('connect_error', (err) => {
           console.error('Socket connection error:', err.message);
           setError('Connection error. Real-time updates may not be available.');
-          // Still allow the app to function without real-time updates
-          setLoading(false);
+          setLoading(false); // Set loading to false even on error
         });
 
         socketInstance.on('disconnect', (reason) => {
@@ -164,7 +154,6 @@ export default function Home() {
       } catch (err) {
         console.error('Failed to initialize:', err);
         setError('Failed to initialize the game. Please refresh the page.');
-      } finally {
         setLoading(false);
       }
     };
@@ -262,6 +251,9 @@ export default function Home() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading the decryption challenge...</p>
+          {!socket?.connected && (
+            <p className="text-yellow-600 mt-2">Connecting to game server...</p>
+          )}
         </div>
       </div>
     );
