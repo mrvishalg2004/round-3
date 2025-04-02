@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { checkNetlifySocketServer, isNetlifyEnvironment } from '@/utils/netlifySocket';
 
 interface EnrollmentFormProps {
   onEnroll: (teamName: string, email: string) => void;
@@ -7,86 +9,132 @@ interface EnrollmentFormProps {
 const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onEnroll }) => {
   const [teamName, setTeamName] = useState('');
   const [email, setEmail] = useState('');
-  const [errors, setErrors] = useState<{teamName?: string; email?: string}>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [serverStatus, setServerStatus] = useState<'unknown' | 'online' | 'offline'>('unknown');
 
-  const validateForm = () => {
-    const newErrors: {teamName?: string; email?: string} = {};
+  // Check server status on component mount
+  useEffect(() => {
+    const checkServerStatus = async () => {
+      try {
+        // Use Netlify-specific check if on Netlify
+        if (isNetlifyEnvironment()) {
+          const isServerAvailable = await checkNetlifySocketServer();
+          setServerStatus(isServerAvailable ? 'online' : 'offline');
+          return;
+        }
+        
+        // Standard check for local development
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+        const response = await fetch(`${socketUrl}/api/socketio`);
+        if (response.ok) {
+          setServerStatus('online');
+        } else {
+          setServerStatus('offline');
+        }
+      } catch (err) {
+        console.error('Server status check failed:', err);
+        setServerStatus('offline');
+      }
+    };
     
+    checkServerStatus();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validate inputs
     if (!teamName.trim()) {
-      newErrors.teamName = 'Team name is required';
+      setError('Please enter a team name');
+      return;
     }
     
     if (!email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      newErrors.email = 'Email is invalid';
+      setError('Please enter an email address');
+      return;
     }
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
     
-    if (validateForm()) {
+    // Check server status before proceeding
+    if (serverStatus === 'offline') {
+      setError('Game server appears to be offline. Please try again later or contact the administrator.');
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    
+    try {
       onEnroll(teamName, email);
+    } catch (err: any) {
+      setError(err.message || 'Failed to enroll. Please try again.');
+      setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-center mb-6">Join the Decryption Challenge</h2>
+    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Join the Decryption Challenge</h2>
+      
+      {serverStatus === 'offline' && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong className="font-bold">Warning:</strong>
+          <span className="block"> Game server appears to be offline. You may experience connection issues.</span>
+        </div>
+      )}
+      
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
       
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label htmlFor="teamName" className="block text-sm font-medium text-gray-700 mb-1">
-            Team Name
-          </label>
+          <label htmlFor="teamName" className="block text-gray-700 font-medium mb-2">Team Name</label>
           <input
             type="text"
             id="teamName"
-            className={`w-full p-2 border rounded-md ${errors.teamName ? 'border-red-500' : 'border-gray-300'}`}
             value={teamName}
             onChange={(e) => setTeamName(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your team name"
+            disabled={loading}
           />
-          {errors.teamName && <p className="mt-1 text-sm text-red-500">{errors.teamName}</p>}
         </div>
         
         <div className="mb-6">
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
-          </label>
+          <label htmlFor="email" className="block text-gray-700 font-medium mb-2">Email</label>
           <input
             type="email"
             id="email"
-            className={`w-full p-2 border rounded-md ${errors.email ? 'border-red-500' : 'border-gray-300'}`}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Enter your email address"
+            disabled={loading}
           />
-          {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email}</p>}
-        </div>
-        
-        <div className="bg-blue-50 p-4 rounded-lg mb-6 border-l-4 border-blue-500">
-          <div className="flex">
-            <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <p className="text-blue-800">
-                By joining, you're entering a decryption challenge where you'll need to solve encrypted messages. Ready to test your skills?
-              </p>
-            </div>
-          </div>
         </div>
         
         <button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          disabled={loading}
+          className={`w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
         >
-          Join Challenge
+          {loading ? 'Joining...' : 'Join Challenge'}
         </button>
       </form>
+      
+      <div className="mt-4 text-sm text-gray-600">
+        <p>Already enrolled? Your session will be automatically restored if you're using the same browser.</p>
+      </div>
     </div>
   );
 };

@@ -1,0 +1,16 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[redirects]]
+  from = "/api/socketio/*"
+  to = "/.netlify/functions/socketio/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/socket.io/*"
+  to = "/.netlify/functions/socketio/:splat"
+  status = 200
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 

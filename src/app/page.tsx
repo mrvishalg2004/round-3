@@ -8,6 +8,7 @@ import GameOver from '@/components/GameOver';
 import EnrollmentForm from '@/components/EnrollmentForm';
 import CountdownTimer from '@/components/CountdownTimer';
 import DecryptionGame from '@/components/DecryptionGame';
+import { initNetlifySocket, isNetlifyEnvironment } from '@/utils/netlifySocket';
 
 export default function Home() {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -85,21 +86,27 @@ export default function Home() {
     
     const initSocket = () => {
       try {
-        // Use the environment variable directly
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+        let socketInstance: Socket;
         
-        console.log(`Connecting to socket at: ${socketUrl}`);
-        
-        // Create socket connection with clear debug options
-        const socketInstance = io(socketUrl, {
-          query: { teamName },
-          path: '/api/socketio',
-          transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
-          timeout: 10000,
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          autoConnect: true,
-        });
+        // Check if on Netlify environment
+        if (isNetlifyEnvironment()) {
+          console.log('Using Netlify-optimized socket connection');
+          socketInstance = initNetlifySocket(teamName);
+        } else {
+          // Use standard socket connection for local development
+          const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+          console.log(`Connecting to socket at: ${socketUrl} (standard connection)`);
+          
+          socketInstance = io(socketUrl, {
+            query: { teamName },
+            path: '/api/socketio',
+            transports: ['polling', 'websocket'], 
+            timeout: 10000,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            autoConnect: true,
+          });
+        }
 
         // Set connection timeout with visual feedback
         socketConnectTimeout = setTimeout(() => {
