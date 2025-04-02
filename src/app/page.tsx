@@ -43,10 +43,10 @@ export default function Home() {
         const socketInstance = io(socketUrl, {
           query: { teamName },
           path: '/api/socketio',
-          reconnectionAttempts: 3,
+          reconnectionAttempts: 5,
           reconnectionDelay: 1000,
-          reconnectionDelayMax: 3000,
-          timeout: 10000,
+          reconnectionDelayMax: 5000,
+          timeout: 20000,
           transports: ['websocket', 'polling'],
           autoConnect: true,
           forceNew: true,
@@ -61,17 +61,29 @@ export default function Home() {
           setSocket(socketInstance);
           setError(null);
           setLoading(false);
+          
+          // Join team room after successful connection
+          socketInstance.emit('joinTeam', { teamName });
+          console.log('Joined team room:', teamName);
         });
 
         socketInstance.on('connect_error', (err) => {
           console.error('Socket connection error:', err.message);
-          setError('Connection error. Real-time updates may not be available.');
+          setError('Connection error. Please check your internet connection and try again.');
           setLoading(false);
+          
+          // Attempt to reconnect after a delay
+          setTimeout(() => {
+            if (!socketInstance.connected) {
+              socketInstance.connect();
+            }
+          }, 2000);
         });
 
         socketInstance.on('disconnect', (reason) => {
           console.log('Socket disconnected:', reason);
           if (reason === 'io server disconnect') {
+            // Server initiated disconnect, try to reconnect
             socketInstance.connect();
           }
         });
@@ -147,9 +159,6 @@ export default function Home() {
           setTeamName(savedTeamName);
           setEmail(savedEmail);
           setEnrolled(true);
-          
-          socketInstance.emit('joinTeam', { teamName: savedTeamName });
-          console.log('Joined team room:', savedTeamName);
         }
 
         // Fetch initial game state
@@ -201,6 +210,7 @@ export default function Home() {
   const handleEnroll = async (newTeamName: string, newEmail: string) => {
     try {
       setLoading(true);
+      setError(null); // Clear any previous errors
       
       // Call the API to register the team
       const response = await axios.post('/api/enroll', {
@@ -220,10 +230,28 @@ export default function Home() {
         localStorage.setItem('teamName', newTeamName);
         localStorage.setItem('email', newEmail);
         
-        // Join the team room in socket.io if socket exists
-        if (socket) {
-          socket.emit('joinTeam', { teamName: newTeamName });
-          console.log('Joined team room:', newTeamName);
+        // Initialize socket connection after successful enrollment
+        if (!socket) {
+          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const host = window.location.host;
+          const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}`;
+          
+          const socketInstance = io(socketUrl, {
+            query: { teamName: newTeamName },
+            path: '/api/socketio',
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            transports: ['websocket', 'polling'],
+            autoConnect: true,
+            forceNew: true,
+            upgrade: true,
+            rememberUpgrade: true,
+            multiplex: false
+          });
+          
+          setSocket(socketInstance);
         }
       } else {
         // Show error if registration failed
