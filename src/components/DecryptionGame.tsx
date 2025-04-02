@@ -497,25 +497,39 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
 
   // Add serverless fallback methods
   const fetchGameStatusFromAPI = async () => {
-    if (!isServerless) return;
-    
     try {
       console.log('Fetching game status directly from API in serverless mode');
       const response = await axios.get('/api/game-state');
+      
+      console.log('Game state API response:', response.data);
+      
       if (response.data) {
-        setGameStatus({
-          active: response.data.active || false,
-          isPaused: response.data.isPaused || false,
-          endTime: response.data.endTime ? new Date(response.data.endTime) : null,
-          remainingTime: response.data.remainingTime || null,
-          pausedTimeRemaining: response.data.pausedTimeRemaining,
-          gameIsFull: response.data.gameIsFull || false,
-          winnersCount: response.data.winnersCount || 0
-        });
+        // Extract the actual game state from the response
+        const gameData = response.data.gameState || response.data;
         
-        if (response.data.active) {
+        // Create a properly formatted game status object
+        const newGameStatus = {
+          active: gameData.active || false,
+          isPaused: gameData.isPaused || false,
+          endTime: gameData.endTime ? new Date(gameData.endTime) : null,
+          remainingTime: gameData.remainingTime || null,
+          pausedTimeRemaining: gameData.pausedTimeRemaining,
+          gameIsFull: gameData.gameIsFull || false,
+          winnersCount: gameData.winnersCount || 0
+        };
+        
+        console.log('Parsed game status:', newGameStatus);
+        
+        // Update state with new game status
+        setGameStatus(newGameStatus);
+        setIsGameInitialized(true);
+        
+        // If game is active, fetch the message
+        if (newGameStatus.active) {
+          console.log('Game is active, fetching message');
           fetchMessage();
         } else {
+          console.log('Game is not active');
           setLoading(false);
         }
       }
@@ -527,19 +541,22 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
 
   // Polling for serverless environment
   useEffect(() => {
-    if (!isServerless || !teamName) return;
+    if (!teamName) return;
     
-    console.log('Setting up polling for serverless environment');
-    
-    // Initial fetch
-    fetchGameStatusFromAPI();
-    
-    // Set up polling interval - poll more frequently on Netlify
-    const interval = setInterval(() => {
+    // Always use polling on Netlify
+    if (isServerless) {
+      console.log('Setting up polling for serverless environment');
+      
+      // Initial fetch immediately
       fetchGameStatusFromAPI();
-    }, 5000); // Poll every 5 seconds instead of 10
-    
-    return () => clearInterval(interval);
+      
+      // Set up polling interval - poll more frequently on Netlify
+      const interval = setInterval(() => {
+        fetchGameStatusFromAPI();
+      }, 3000); // Poll every 3 seconds for faster updates
+      
+      return () => clearInterval(interval);
+    }
   }, [teamName, isServerless]);
 
   // Update the loading state check
@@ -548,23 +565,43 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       <div className="flex flex-col items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p className="text-gray-600">Loading the decryption challenge...</p>
-        {!socket?.connected && (
+        {!socket?.connected && isServerless && (
+          <p className="text-yellow-600 mt-2">Using API polling mode. Game updates may be slightly delayed.</p>
+        )}
+        {!socket?.connected && !isServerless && (
           <p className="text-yellow-600 mt-2">Connecting to game server...</p>
         )}
       </div>
     );
   }
 
-  // Show waiting screen when game is not active
-  if (!gameStatus?.active) {
+  // Show waiting screen when game is not active and not in loading state
+  if (gameStatus && !gameStatus.active) {
     return (
       <div className="py-8">
         <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
           <p className="text-xl font-semibold mb-2">👋 Welcome to the Decryption Challenge!</p>
           <p className="text-lg">Please wait for an administrator to start the game.</p>
           <p className="mt-2 text-lg">The game will begin automatically when started.</p>
-          {!socket?.connected && (
+          {isServerless && (
+            <p className="text-blue-600 mt-2">Using API polling. Game status checks every 3 seconds.</p>
+          )}
+          {!isServerless && !socket?.connected && (
             <p className="text-yellow-600 mt-2">Connecting to game server...</p>
+          )}
+          
+          {isServerless && (
+            <div className="mt-4">
+              <button 
+                onClick={() => {
+                  fetchGameStatusFromAPI();
+                }}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
+              >
+                Check Game Status
+              </button>
+              <p className="text-xs mt-2 text-gray-600">Click this button if the game should have started</p>
+            </div>
           )}
         </div>
         

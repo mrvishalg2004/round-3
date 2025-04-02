@@ -90,18 +90,19 @@ export default function Home() {
         
         if (response.data) {
           console.log('Game state response:', response.data);
-          const { active, startTime, endTime: gameEndTime, isPaused: gamePaused, pausedTimeRemaining: gamePausedTime } = response.data;
+          // Extract the actual game state from the response
+          const gameData = response.data.gameState || response.data;
           
-          setIsGameActive(active);
+          setIsGameActive(gameData.active);
           
-          if (gameEndTime) {
-            setEndTime(new Date(gameEndTime));
+          if (gameData.endTime) {
+            setEndTime(new Date(gameData.endTime));
           }
           
-          setIsPaused(gamePaused);
+          setIsPaused(gameData.isPaused);
           
-          if (gamePausedTime) {
-            setPausedTimeRemaining(gamePausedTime);
+          if (gameData.pausedTimeRemaining) {
+            setPausedTimeRemaining(gameData.pausedTimeRemaining);
           }
         }
         return response.data;
@@ -119,6 +120,20 @@ export default function Home() {
         .then(() => {
           setLoading(false);
           setError(null);
+          
+          // Set up polling for Netlify to ensure game state stays updated
+          const pollInterval = setInterval(() => {
+            fetchGameState()
+              .then(data => {
+                console.log('Polled game state:', data);
+              })
+              .catch(err => {
+                console.error('Error polling game state:', err);
+              });
+          }, 5000); // Poll every 5 seconds
+          
+          // Clean up interval on unmount
+          return () => clearInterval(pollInterval);
         })
         .catch(err => {
           console.error('Error fetching initial game state in Netlify:', err);

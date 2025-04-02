@@ -63,7 +63,8 @@ export async function GET(): Promise<NextResponse> {
       gameIsFull: gameState.gameIsFull || false
     };
     
-    return NextResponse.json({ gameState: safeGameState });
+    // Return a consistent response format
+    return NextResponse.json(safeGameState);
   } catch (error) {
     console.error('Error fetching game state:', error);
     return NextResponse.json(
