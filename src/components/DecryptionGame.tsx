@@ -259,7 +259,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
 
   // Update the socket event handler for game status changes
   useEffect(() => {
-    if (!socket || !isSocketConnected) return;
+    if (!socket) return;
 
     socket.on('gameStatusChange', (data) => {
       console.log('Game status changed:', data);
@@ -288,12 +288,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       
       // Set game as initialized when we receive any state
       setIsGameInitialized(true);
+      setLoading(false);
       
       // If game is active, fetch the message
       if (data.active) {
         fetchMessage();
-      } else {
-        setLoading(false);
       }
     });
 
@@ -336,7 +335,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     return () => {
       socket.off('gameStatusChange');
     };
-  }, [socket, isSocketConnected]);
+  }, [socket]);
 
   // Handle submission
   const handleSubmit = async (submittedText: string) => {
@@ -497,7 +496,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       <div className="flex flex-col items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p className="text-gray-600">Loading the decryption challenge...</p>
-        {!isSocketConnected && (
+        {!socket?.connected && (
           <p className="text-yellow-600 mt-2">Connecting to game server...</p>
         )}
       </div>
@@ -512,7 +511,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           <p className="text-xl font-semibold mb-2">👋 Welcome to the Decryption Challenge!</p>
           <p className="text-lg">Please wait for an administrator to start the game.</p>
           <p className="mt-2 text-lg">The game will begin automatically when started.</p>
-          {!isSocketConnected && (
+          {!socket?.connected && (
             <p className="text-yellow-600 mt-2">Connecting to game server...</p>
           )}
         </div>
