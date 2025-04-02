@@ -25,6 +25,39 @@ export default function Home() {
 
   // Initialize socket connection
   useEffect(() => {
+    if (!teamName) return;
+
+    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
+      query: { teamName },
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000
+    });
+
+    socket.on('connect', () => {
+      console.log('Socket connected');
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.log('Socket disconnected:', reason);
+    });
+
+    setSocket(socket);
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [teamName]);
+
+  // Initialize socket connection
+  useEffect(() => {
     const initSocket = async () => {
       try {
         setLoading(true);
