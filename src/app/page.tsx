@@ -27,50 +27,6 @@ export default function Home() {
   useEffect(() => {
     if (!teamName) return;
 
-    const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
-      query: { teamName },
-      transports: ['websocket', 'polling'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      timeout: 20000,
-      autoConnect: true,
-      forceNew: true
-    });
-
-    socket.on('connect', () => {
-      console.log('Socket connected');
-      setError(null); // Clear any connection errors
-    });
-
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error);
-      setError('Connection error. Real-time updates may not be available.');
-    });
-
-    socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      if (reason === 'io server disconnect') {
-        // Server initiated disconnect, try to reconnect
-        socket.connect();
-      }
-    });
-
-    socket.on('error', (error) => {
-      console.error('Socket error:', error);
-      setError('Connection error. Real-time updates may not be available.');
-    });
-
-    setSocket(socket);
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [teamName]);
-
-  // Initialize socket connection
-  useEffect(() => {
     const initSocket = async () => {
       try {
         setLoading(true);
@@ -91,7 +47,8 @@ export default function Home() {
         console.log(`Connecting to socket at: ${socketUrl}`);
         
         // Create socket connection with fallback options
-        const socketInstance = io({
+        const socketInstance = io(socketUrl, {
+          query: { teamName },
           path: '/api/socketio',
           reconnectionAttempts: 5,
           reconnectionDelay: 1000,
@@ -104,39 +61,22 @@ export default function Home() {
         socketInstance.on('connect', () => {
           console.log('Socket connected:', socketInstance.id);
           setSocket(socketInstance);
+          setError(null); // Clear any connection errors
         });
 
         socketInstance.on('connect_error', (err) => {
           console.error('Socket connection error:', err.message);
-          // If we're on Vercel, we might need to use polling only
-          if (window.location.hostname.includes('vercel.app')) {
-            console.log('Detected Vercel environment, retrying with polling transport');
-            // Close current socket
-            socketInstance.close();
-            
-            // Retry with polling only
-            const fallbackSocket = io({
-              path: '/api/socketio',
-              transports: ['polling'],
-              reconnectionAttempts: 3
-            });
-            
-            fallbackSocket.on('connect', () => {
-              console.log('Fallback socket connected with polling:', fallbackSocket.id);
-              setSocket(fallbackSocket);
-            });
-            
-            fallbackSocket.on('connect_error', (fallbackErr) => {
-              console.error('Fallback socket connection failed:', fallbackErr.message);
-              setError('Connection error. Real-time updates may not be available.');
-              // Still allow the app to function without real-time updates
-              setLoading(false);
-            });
-          }
+          setError('Connection error. Real-time updates may not be available.');
+          // Still allow the app to function without real-time updates
+          setLoading(false);
         });
 
-        socketInstance.on('disconnect', () => {
-          console.log('Socket disconnected');
+        socketInstance.on('disconnect', (reason) => {
+          console.log('Socket disconnected:', reason);
+          if (reason === 'io server disconnect') {
+            // Server initiated disconnect, try to reconnect
+            socketInstance.connect();
+          }
         });
 
         socketInstance.on('error', (err) => {
@@ -265,7 +205,7 @@ export default function Home() {
         socket.disconnect();
       }
     };
-  }, []);
+  }, [teamName]);
 
   // Function to handle enrolling in the game
   const handleEnroll = async (newTeamName: string, newEmail: string) => {
