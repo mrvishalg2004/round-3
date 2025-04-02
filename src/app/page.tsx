@@ -23,6 +23,54 @@ export default function Home() {
   const [isPaused, setIsPaused] = useState(false);
   const [pausedTimeRemaining, setPausedTimeRemaining] = useState<number | undefined>(undefined);
 
+  // Function to handle enrolling in the game
+  const handleEnroll = async (newTeamName: string, newEmail: string) => {
+    try {
+      setLoading(true);
+      setError(null); // Clear any previous errors
+      
+      // Call the API to register the team
+      const response = await axios.post('/api/enroll', {
+        teamName: newTeamName,
+        email: newEmail
+      });
+      
+      console.log('Team registered:', response.data);
+      
+      // If registration was successful, update the local state
+      if (response.data.success) {
+        // Store in local storage first so socket connection has access to it
+        localStorage.setItem('teamName', newTeamName);
+        localStorage.setItem('email', newEmail);
+        
+        setTeamName(newTeamName);
+        setEmail(newEmail);
+        
+        // Set enrolled first, then initiate socket connection via useEffect
+        setEnrolled(true);
+        
+        // Clear any previous socket
+        if (socket) {
+          socket.disconnect();
+          setSocket(null);
+        }
+        
+        setLoading(false); // Finish loading here to avoid UI lag
+      } else {
+        // Show error if registration failed
+        setError(response.data.error || 'Failed to register team. Please try again.');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      console.error('Error enrolling team:', err);
+      const errorMessage = err.response?.data?.error || 'Registration failed. Please try again.';
+      setError(errorMessage);
+      // Reset enrollment to false in case of error
+      setEnrolled(false);
+      setLoading(false);
+    }
+  };
+
   // Initialize socket connection
   useEffect(() => {
     if (!teamName) {
@@ -30,7 +78,12 @@ export default function Home() {
       return;
     }
 
-    const initSocket = async () => {
+    console.log(`Initializing socket connection for team: ${teamName}`);
+    setLoading(true);
+    
+    let socketConnectTimeout: NodeJS.Timeout;
+    
+    const initSocket = () => {
       try {
         // Get the window location for dynamic socket connection
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -39,131 +92,138 @@ export default function Home() {
         
         console.log(`Connecting to socket at: ${socketUrl}`);
         
-        // Create socket connection with optimized settings
+        // Create socket connection with basic settings first
         const socketInstance = io(socketUrl, {
           query: { teamName },
           path: '/api/socketio',
-          reconnectionAttempts: 5,
-          reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          timeout: 20000,
-          transports: ['websocket', 'polling'],
-          autoConnect: true,
-          forceNew: true,
-          upgrade: true,
-          rememberUpgrade: true,
-          multiplex: false
+          transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
+          timeout: 10000,
+          autoConnect: true
         });
 
-        // Handle socket events
-        socketInstance.on('connect', () => {
-          console.log('Socket connected:', socketInstance.id);
-          setSocket(socketInstance);
-          setError(null);
-          setLoading(false);
-          
-          // Join team room after successful connection
-          socketInstance.emit('joinTeam', { teamName });
-          console.log('Joined team room:', teamName);
-        });
-
-        socketInstance.on('connect_error', (err) => {
-          console.error('Socket connection error:', err.message);
-          // Don't set error immediately, try to reconnect first
-          setTimeout(() => {
-            if (!socketInstance.connected) {
-              setError('Connection error. Please check your internet connection and try again.');
-              setLoading(false);
-            }
-          }, 2000);
-        });
-
-        socketInstance.on('disconnect', (reason) => {
-          console.log('Socket disconnected:', reason);
-          if (reason === 'io server disconnect') {
-            // Server initiated disconnect, try to reconnect
-            socketInstance.connect();
+        // Set connection timeout
+        socketConnectTimeout = setTimeout(() => {
+          if (!socketInstance.connected) {
+            console.log('Socket connection timeout, falling back to long polling');
+            // Recreate socket with polling only
+            socketInstance.disconnect();
+            
+            const fallbackSocket = io(socketUrl, {
+              query: { teamName },
+              path: '/api/socketio',
+              transports: ['polling'], // Polling only as fallback
+              timeout: 20000
+            });
+            
+            setupSocketHandlers(fallbackSocket);
           }
-        });
+        }, 5000);
 
-        socketInstance.on('error', (err) => {
-          console.error('Socket error:', err);
-          setError('Connection error. Please refresh the page.');
-        });
+        setupSocketHandlers(socketInstance);
+        
+        function setupSocketHandlers(socket: Socket) {
+          socket.on('connect', () => {
+            console.log('Socket connected:', socket.id);
+            clearTimeout(socketConnectTimeout);
+            setSocket(socket);
+            setError(null);
+            setLoading(false);
+            
+            // Join team room after successful connection
+            socket.emit('joinTeam', { teamName });
+            console.log('Joined team room:', teamName);
+            
+            // Get current game state
+            fetchGameState();
+          });
 
-        socketInstance.on('gameStatusChange', (data) => {
-          console.log('Game status changed:', data);
-          
-          if (data.type === 'pause') {
-            setIsPaused(true);
-            if (data.remainingTime) {
-              setPausedTimeRemaining(data.remainingTime);
-            }
-          } else if (data.type === 'resume') {
-            setIsPaused(false);
-            if (data.endTime) {
-              setEndTime(new Date(data.endTime));
-            }
-          } else if (data.type === 'start') {
-            setIsGameActive(true);
-            setIsGameOver(false);
-            if (data.endTime) {
-              setEndTime(new Date(data.endTime));
-            }
-            setIsPaused(false);
-          } else if (data.type === 'stop' || data.type === 'reset') {
-            setIsGameActive(false);
-          } else if (data.type === 'gameComplete' || data.type === 'end') {
-            setIsGameOver(true);
-          }
-        });
+          socket.on('connect_error', (err) => {
+            console.error('Socket connection error:', err.message);
+            clearTimeout(socketConnectTimeout);
+            
+            // Set error after a delay
+            setTimeout(() => {
+              if (!socket.connected) {
+                console.log('Socket still not connected after delay');
+                setError('Connection error. Please check your internet connection and try again.');
+                setLoading(false);
+              }
+            }, 3000);
+          });
 
-        socketInstance.on('teamStatusChange', (data) => {
-          console.log('Team status changed:', data);
-          
-          // Check if the update is for this team
-          const savedTeamName = localStorage.getItem('teamName');
-          if (savedTeamName && data.teamName === savedTeamName) {
-            if (data.isBlocked) {
-              setIsBlocked(true);
-              
-              // Show custom message if provided, otherwise show default message
-              const blockMessage = data.message || 'Your team has been blocked by an administrator.';
-              alert(blockMessage);
-              
-              // Clear local storage and reload after a delay
-              setTimeout(() => {
-                localStorage.removeItem('teamName');
-                localStorage.removeItem('email');
-                window.location.reload();
-              }, 2000);
-            } else if (data.isBlocked === false) {
-              // Team has been unblocked
-              setIsBlocked(false);
-              
-              // Show unblock message if provided
-              if (data.message) {
-                alert(data.message);
+          socket.on('disconnect', (reason) => {
+            console.log('Socket disconnected:', reason);
+            if (reason === 'io server disconnect') {
+              socket.connect();
+            }
+          });
+
+          socket.on('error', (err) => {
+            console.error('Socket error:', err);
+            setError('Connection error. Please refresh the page.');
+          });
+
+          socket.on('gameStatusChange', (data) => {
+            console.log('Game status changed:', data);
+            
+            if (data.type === 'pause') {
+              setIsPaused(true);
+              if (data.remainingTime) {
+                setPausedTimeRemaining(data.remainingTime);
+              }
+            } else if (data.type === 'resume') {
+              setIsPaused(false);
+              if (data.endTime) {
+                setEndTime(new Date(data.endTime));
+              }
+            } else if (data.type === 'start') {
+              setIsGameActive(true);
+              setIsGameOver(false);
+              if (data.endTime) {
+                setEndTime(new Date(data.endTime));
+              }
+              setIsPaused(false);
+            } else if (data.type === 'stop' || data.type === 'reset') {
+              setIsGameActive(false);
+            } else if (data.type === 'gameComplete' || data.type === 'end') {
+              setIsGameOver(true);
+            }
+          });
+
+          socket.on('teamStatusChange', (data) => {
+            console.log('Team status changed:', data);
+            
+            // Check if the update is for this team
+            const savedTeamName = localStorage.getItem('teamName');
+            if (savedTeamName && data.teamName === savedTeamName) {
+              if (data.isBlocked) {
+                setIsBlocked(true);
+                
+                // Show custom message if provided, otherwise show default message
+                const blockMessage = data.message || 'Your team has been blocked by an administrator.';
+                alert(blockMessage);
+                
+                // Clear local storage and reload after a delay
+                setTimeout(() => {
+                  localStorage.removeItem('teamName');
+                  localStorage.removeItem('email');
+                  window.location.reload();
+                }, 2000);
+              } else if (data.isBlocked === false) {
+                // Team has been unblocked
+                setIsBlocked(false);
+                
+                // Show unblock message if provided
+                if (data.message) {
+                  alert(data.message);
+                }
               }
             }
-          }
-        });
-
-        // Check if already enrolled
-        const savedTeamName = localStorage.getItem('teamName');
-        const savedEmail = localStorage.getItem('email');
-        
-        if (savedTeamName && savedEmail) {
-          setTeamName(savedTeamName);
-          setEmail(savedEmail);
-          setEnrolled(true);
+          });
         }
 
-        // Fetch initial game state
-        await fetchGameState();
-
       } catch (err) {
-        console.error('Failed to initialize:', err);
+        console.error('Failed to initialize socket:', err);
         setError('Failed to initialize the game. Please refresh the page.');
         setLoading(false);
       }
@@ -172,9 +232,11 @@ export default function Home() {
     // Fetch game state
     const fetchGameState = async () => {
       try {
+        console.log('Fetching initial game state');
         const response = await axios.get('/api/game-state');
         
         if (response.data) {
+          console.log('Game state response:', response.data);
           const { active, startTime, endTime: gameEndTime, isPaused: gamePaused, pausedTimeRemaining: gamePausedTime } = response.data;
           
           setIsGameActive(active);
@@ -197,97 +259,14 @@ export default function Home() {
     initSocket();
 
     return () => {
+      // Clean up on unmount
       if (socket) {
         console.log('Cleaning up socket connection');
         socket.disconnect();
       }
+      clearTimeout(socketConnectTimeout);
     };
   }, [teamName]);
-
-  // Function to handle enrolling in the game
-  const handleEnroll = async (newTeamName: string, newEmail: string) => {
-    try {
-      setLoading(true);
-      setError(null); // Clear any previous errors
-      
-      // Call the API to register the team
-      const response = await axios.post('/api/enroll', {
-        teamName: newTeamName,
-        email: newEmail
-      });
-      
-      console.log('Team registered:', response.data);
-      
-      // If registration was successful, update the local state
-      if (response.data.success) {
-        setTeamName(newTeamName);
-        setEmail(newEmail);
-        setEnrolled(true);
-        
-        // Store in local storage for persistence
-        localStorage.setItem('teamName', newTeamName);
-        localStorage.setItem('email', newEmail);
-        
-        // Initialize socket connection after successful enrollment
-        if (!socket) {
-          const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-          const host = window.location.host;
-          const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}`;
-          
-          const socketInstance = io(socketUrl, {
-            query: { teamName: newTeamName },
-            path: '/api/socketio',
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            reconnectionDelayMax: 5000,
-            timeout: 20000,
-            transports: ['websocket', 'polling'],
-            autoConnect: true,
-            forceNew: true,
-            upgrade: true,
-            rememberUpgrade: true,
-            multiplex: false
-          });
-          
-          // Set up connection event handlers
-          socketInstance.on('connect', () => {
-            console.log('Socket connected after enrollment:', socketInstance.id);
-            setSocket(socketInstance);
-            setError(null);
-            setLoading(false);
-            
-            // Join team room after successful connection
-            socketInstance.emit('joinTeam', { teamName: newTeamName });
-            console.log('Joined team room after enrollment:', newTeamName);
-          });
-          
-          socketInstance.on('connect_error', (err) => {
-            console.error('Socket connection error after enrollment:', err.message);
-            // Don't set error immediately, try to reconnect first
-            setTimeout(() => {
-              if (!socketInstance.connected) {
-                setError('Connection error. Please check your internet connection and try again.');
-                setLoading(false);
-              }
-            }, 2000);
-          });
-          
-          setSocket(socketInstance);
-        }
-      } else {
-        // Show error if registration failed
-        setError(response.data.error || 'Failed to register team. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('Error enrolling team:', err);
-      const errorMessage = err.response?.data?.error || 'Registration failed. Please try again.';
-      setError(errorMessage);
-      // Reset enrollment to false in case of error
-      setEnrolled(false);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Function to handle game over
   const handleGameOver = () => {
