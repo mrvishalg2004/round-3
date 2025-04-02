@@ -206,26 +206,14 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       
       console.log("Fetching encrypted message for team:", teamName);
       
-      // Simplified fetch without retries
       const response = await axios.get(`/api/encryption?teamName=${encodeURIComponent(teamName)}`);
       
       console.log("API response:", response.data);
       
       if (response.data.message) {
-        // Check if we have a valid message ID
-        if (!response.data.message.id) {
-          console.error("Message missing ID in response:", response.data.message);
-          throw new Error("The message from the server is missing its ID. Please try refreshing again.");
-        }
-        
-        // Check if we have encrypted text
-        if (!response.data.message.encryptedText) {
-          console.error("Message missing encrypted text:", response.data.message);
-          throw new Error("The message from the server is missing encrypted text. Please try refreshing again.");
-        }
-        
         setMessage(response.data.message);
         setGameStatus(response.data.gameStatus);
+        setLoading(false);
         
         // If game is already full, trigger game over
         if (response.data.gameStatus.gameIsFull) {
@@ -234,18 +222,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       } else {
         console.error("Message data missing in response:", response.data);
         setError('No message data returned from server. Please try again.');
+        setLoading(false);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.error || err.message || 'Unknown error occurred';
       console.error('Error fetching message:', err);
-      console.error('Error details:', {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
-      setError(`Failed to load the encrypted message: ${errorMessage}`);
-    } finally {
+      setError(`Failed to load the encrypted message: ${err.message}`);
       setLoading(false);
     }
   };
@@ -293,8 +274,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     // Initial game state fetch
     const fetchInitialState = async () => {
       try {
+        setLoading(true);
         const response = await axios.get('/api/game-state');
         const gameState = response.data.gameState;
+        
+        console.log('Initial game state:', gameState);
         
         // Set initial game status
         setGameStatus({
@@ -330,6 +314,11 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
 
   // Handle submission
   const handleSubmit = async (submittedText: string) => {
+    if (!message) {
+      setError('No active message found. Please refresh the page.');
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       setError(null); // Clear any previous errors
@@ -352,8 +341,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       setSubmissionResult({
         success: response.data.success,
         message: response.data.message,
-        isCorrect: response.data.success, // Use success flag directly - if true, the answer is correct
-        position: response.data.position
+        isCorrect: response.data.success,
+        position: response.data.position || undefined
       });
       
       // If game is full after this submission, trigger game over
@@ -368,23 +357,14 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       }
     } catch (err: any) {
       console.error('Error submitting answer:', err);
-      console.error('Error details:', {
-        status: err.response?.status,
-        statusText: err.response?.statusText,
-        data: err.response?.data,
-        message: err.message
-      });
-      
-      // Set a more specific error message
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to submit your answer';
-      setError(`Failed to submit your answer: ${errorMessage}`);
+      setError(`Failed to submit your answer: ${err.message}`);
       
       // Even if there's an error, still set a result to show in the form
       setSubmissionResult({
         success: false,
         message: 'Submission failed. Please try again.',
         isCorrect: false,
-        position: null
+        position: undefined
       });
     } finally {
       setIsSubmitting(false);
@@ -485,7 +465,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     };
   }, [gameStatus?.active, isPaused, handleSecurityViolation]);
 
-  // Modify the loading state check
+  // Update the loading state check
   if (loading && !isGameInitialized) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
