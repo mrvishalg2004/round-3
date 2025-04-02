@@ -30,6 +30,7 @@ interface GameStatus {
   isPaused: boolean;
   endTime: Date | null;
   remainingTime: number | null;
+  pausedTimeRemaining?: number;
 }
 
 interface SubmissionResult {
@@ -38,6 +39,18 @@ interface SubmissionResult {
   isCorrect?: boolean;
   position?: number;
 }
+
+// Add type guard function
+const isValidMessage = (message: any): message is EncryptedMessage => {
+  return (
+    message &&
+    typeof message.id === 'string' &&
+    typeof message.encryptedText === 'string' &&
+    typeof message.hint === 'string' &&
+    typeof message.difficulty === 'string' &&
+    typeof message.encryptionType === 'string'
+  );
+};
 
 const DecryptionGame: React.FC<DecryptionGameProps> = ({ 
   socket, 
@@ -237,16 +250,62 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     }
   };
 
-  // Modify the useEffect that fetches game state
+  // Modify the socket event handler for game status changes
   useEffect(() => {
-    const fetchGameState = async () => {
+    if (!socket) return;
+
+    socket.on('gameStatusChange', (data) => {
+      console.log('Game status changed:', data);
+      
+      // Update game status for any state change
+      setGameStatus(prev => {
+        if (!prev) return {
+          gameIsFull: false,
+          winnersCount: 0,
+          active: data.active,
+          isPaused: data.isPaused,
+          endTime: data.endTime ? new Date(data.endTime) : null,
+          remainingTime: data.remainingTime,
+          pausedTimeRemaining: data.pausedTimeRemaining
+        };
+        
+        return {
+          ...prev,
+          active: data.active,
+          endTime: data.endTime ? new Date(data.endTime) : null,
+          isPaused: data.isPaused,
+          remainingTime: data.remainingTime,
+          pausedTimeRemaining: data.pausedTimeRemaining
+        };
+      });
+      
+      // Set game as initialized when we receive any state
+      setIsGameInitialized(true);
+      
+      // If game is active, fetch the message
+      if (data.active) {
+        fetchMessage();
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Initial game state fetch
+    const fetchInitialState = async () => {
       try {
-        setLoading(true);
         const response = await axios.get('/api/game-state');
         const gameState = response.data.gameState;
         
-        // Set game status regardless of active state
-        setGameStatus(gameState);
+        // Set initial game status
+        setGameStatus({
+          gameIsFull: false,
+          winnersCount: 0,
+          active: gameState.active,
+          isPaused: gameState.isPaused,
+          endTime: gameState.endTime ? new Date(gameState.endTime) : null,
+          remainingTime: gameState.remainingTime,
+          pausedTimeRemaining: gameState.pausedTimeRemaining
+        });
         setIsGameInitialized(true);
         
         // If game is active, fetch the message
@@ -256,43 +315,13 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           setLoading(false);
         }
       } catch (error) {
-        console.error('Error fetching game state:', error);
+        console.error('Error fetching initial game state:', error);
         setError('Failed to fetch game state. Please refresh the page.');
         setLoading(false);
       }
     };
 
-    fetchGameState();
-  }, []);
-
-  // Modify the socket event handler for game status changes
-  useEffect(() => {
-    if (!socket) return;
-
-    socket.on('gameStatusChange', (data) => {
-      console.log('Game status changed:', data);
-      
-      // Only update game status if it's a valid state change
-      if (data.type === 'update' || data.type === 'reset') {
-        setGameStatus(prev => ({
-          ...prev,
-          active: data.active,
-          endTime: data.endTime,
-          isPaused: data.isPaused,
-          remainingTime: data.remainingTime
-        }));
-        
-        // Set game as initialized when we receive the first valid state
-        setIsGameInitialized(true);
-        
-        // If game is active, fetch the message
-        if (data.active) {
-          fetchMessage();
-        } else {
-          setLoading(false);
-        }
-      }
-    });
+    fetchInitialState();
 
     return () => {
       socket.off('gameStatusChange');
@@ -466,8 +495,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     );
   }
 
-  // Show waiting screen when game is not initialized or not active
-  if (!isGameInitialized || !gameStatus?.active) {
+  // Show waiting screen only when game is not initialized or explicitly not active
+  if (!isGameInitialized || (gameStatus && !gameStatus.active)) {
     return (
       <div className="py-8">
         <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
@@ -547,22 +576,18 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           </div>
           
           {/* Timer Display */}
-          {gameStatus?.active && (
+          {gameStatus?.active && gameStatus.endTime && (
             <div className="mb-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg p-4 shadow-lg">
               <div className="text-center">
                 <h3 className="text-white text-lg font-semibold mb-2">Time Remaining</h3>
-                {gameStatus.endTime ? (
-                  <div className="text-4xl font-bold text-white">
-                    <CountdownTimer 
-                      endTime={new Date(gameStatus.endTime)}
-                      isPaused={gameStatus.isPaused || false}
-                      pausedTimeRemaining={gameStatus.pausedTimeRemaining}
-                      onTimeExpired={onGameOver}
-                    />
-                  </div>
-                ) : (
-                  <p className="text-white text-lg">Timer not set</p>
-                )}
+                <div className="text-4xl font-bold text-white">
+                  <CountdownTimer 
+                    endTime={gameStatus.endTime}
+                    isPaused={gameStatus.isPaused}
+                    pausedTimeRemaining={gameStatus.pausedTimeRemaining ?? undefined}
+                    onTimeExpired={onGameOver}
+                  />
+                </div>
                 {gameStatus.isPaused && (
                   <p className="text-white text-sm mt-2">⏸️ Game Paused</p>
                 )}
@@ -605,30 +630,32 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
               </div>
               
               {/* Show the encrypted message and hint even when paused */}
-              <div>
-                <div className="flex justify-between items-center mb-4 mt-8">
-                  <h3 className="text-xl font-semibold text-gray-800">Encrypted Message:</h3>
-                  <button 
-                    onClick={fetchMessage}
-                    className="text-sm bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                    </svg>
-                    Refresh Message
-                  </button>
-                </div>
-                <div className="bg-gray-100 p-4 rounded-md font-mono text-base leading-relaxed overflow-x-auto border-2 border-gray-300 shadow-inner mb-6">
-                  <span className="text-gray-900 font-bold tracking-wide">{message.encryptedText}</span>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Hint:</h3>
-                  <div className="bg-blue-50 p-4 rounded-md text-blue-900 text-lg border-2 border-blue-200 shadow-inner">
-                    <span className="font-semibold">{message.hint}</span>
+              {message && isValidMessage(message) && (
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold text-gray-800">Encrypted Message:</h3>
+                    <button 
+                      onClick={fetchMessage}
+                      className="text-sm bg-blue-500 hover:bg-blue-600 text-white font-medium py-1 px-3 rounded flex items-center"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                      </svg>
+                      Refresh Message
+                    </button>
+                  </div>
+                  <div className="bg-gray-100 p-4 rounded-md font-mono text-base leading-relaxed overflow-x-auto border-2 border-gray-300 shadow-inner mb-6">
+                    <span className="text-gray-900 font-bold tracking-wide">{message.encryptedText}</span>
+                  </div>
+                  
+                  <div className="mb-6">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Hint:</h3>
+                    <div className="bg-blue-50 p-4 rounded-md text-blue-900 text-lg border-2 border-blue-200 shadow-inner">
+                      <span className="font-semibold">{message.hint}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           ) : (
             // Show game content when active and not paused
