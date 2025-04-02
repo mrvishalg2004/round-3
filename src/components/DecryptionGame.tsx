@@ -497,7 +497,10 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
         <p className="text-gray-600">Loading the decryption challenge...</p>
         {!socket?.connected && (
-          <p className="text-yellow-600 mt-2">Connecting to game server...</p>
+          <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+            <p className="text-yellow-600">Connecting to game server...</p>
+            <p className="text-sm mt-2">If this persists, please check your internet connection and refresh the page.</p>
+          </div>
         )}
       </div>
     );
@@ -512,7 +515,10 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           <p className="text-lg">Please wait for an administrator to start the game.</p>
           <p className="mt-2 text-lg">The game will begin automatically when started.</p>
           {!socket?.connected && (
-            <p className="text-yellow-600 mt-2">Connecting to game server...</p>
+            <div className="mt-4 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+              <p className="text-yellow-600">Connecting to game server...</p>
+              <p className="text-sm mt-2">If this persists, please check your internet connection and refresh the page.</p>
+            </div>
           )}
         </div>
         

@@ -29,24 +29,37 @@ export default function Home() {
 
     const socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
       query: { teamName },
-      transports: ['websocket'],
+      transports: ['websocket', 'polling'],
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      timeout: 20000
+      timeout: 20000,
+      autoConnect: true,
+      forceNew: true
     });
 
     socket.on('connect', () => {
       console.log('Socket connected');
+      setError(null); // Clear any connection errors
     });
 
     socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
+      setError('Connection error. Real-time updates may not be available.');
     });
 
     socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
+      if (reason === 'io server disconnect') {
+        // Server initiated disconnect, try to reconnect
+        socket.connect();
+      }
+    });
+
+    socket.on('error', (error) => {
+      console.error('Socket error:', error);
+      setError('Connection error. Real-time updates may not be available.');
     });
 
     setSocket(socket);
