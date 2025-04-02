@@ -135,6 +135,16 @@ const EnrollmentForm: React.FC<EnrollmentFormProps> = ({ onEnroll }) => {
       <div className="mt-4 text-sm text-gray-600">
         <p>Already enrolled? Your session will be automatically restored if you're using the same browser.</p>
       </div>
+
+      {isNetlifyEnvironment() && (
+        <div className="mt-6 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded relative" role="alert">
+          <strong className="font-bold">Notice: </strong>
+          <span className="block sm:inline">
+            This game is running on Netlify, which has limited support for real-time features. 
+            The game will function with some limitations, including less frequent updates and possible delays in receiving game status changes.
+          </span>
+        </div>
+      )}
     </div>
   );
 };

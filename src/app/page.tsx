@@ -82,36 +82,71 @@ export default function Home() {
     console.log(`Initializing socket connection for team: ${teamName}`);
     setLoading(true);
     
+    // Fetch game state function (moved up to fix linter error)
+    const fetchGameState = async () => {
+      try {
+        console.log('Fetching initial game state');
+        const response = await axios.get('/api/game-state');
+        
+        if (response.data) {
+          console.log('Game state response:', response.data);
+          const { active, startTime, endTime: gameEndTime, isPaused: gamePaused, pausedTimeRemaining: gamePausedTime } = response.data;
+          
+          setIsGameActive(active);
+          
+          if (gameEndTime) {
+            setEndTime(new Date(gameEndTime));
+          }
+          
+          setIsPaused(gamePaused);
+          
+          if (gamePausedTime) {
+            setPausedTimeRemaining(gamePausedTime);
+          }
+        }
+        return response.data;
+      } catch (err) {
+        console.error('Error fetching game state:', err);
+        throw err;
+      }
+    };
+    
+    // Skip socket connection on Netlify and use API polling instead
+    if (isNetlifyEnvironment()) {
+      console.log('Running in Netlify environment - skipping socket connection and using API polling');
+      // Just fetch the initial game state
+      fetchGameState()
+        .then(() => {
+          setLoading(false);
+          setError(null);
+        })
+        .catch(err => {
+          console.error('Error fetching initial game state in Netlify:', err);
+          setError('Error connecting to game server. Please refresh the page.');
+          setLoading(false);
+        });
+      return;
+    }
+    
     let socketConnectTimeout: NodeJS.Timeout;
     
     const initSocket = () => {
       try {
         let socketInstance: Socket;
         
-        // Check if on Netlify environment
-        if (isNetlifyEnvironment()) {
-          console.log('Using Netlify-optimized socket connection');
-          socketInstance = initNetlifySocket(teamName);
-          
-          // For serverless environments, we'll also fetch game state directly
-          fetchGameState().catch(err => {
-            console.error('Error fetching initial game state in serverless mode:', err);
-          });
-        } else {
-          // Use standard socket connection for local development
-          const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
-          console.log(`Connecting to socket at: ${socketUrl} (standard connection)`);
-          
-          socketInstance = io(socketUrl, {
-            query: { teamName },
-            path: '/api/socketio',
-            transports: ['polling', 'websocket'], 
-            timeout: 10000,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            autoConnect: true,
-          });
-        }
+        // Use standard socket connection for local development
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
+        console.log(`Connecting to socket at: ${socketUrl} (standard connection)`);
+        
+        socketInstance = io(socketUrl, {
+          query: { teamName },
+          path: '/api/socketio',
+          transports: ['polling', 'websocket'], 
+          timeout: 10000,
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          autoConnect: true,
+        });
 
         // Set connection timeout with visual feedback
         socketConnectTimeout = setTimeout(() => {
@@ -270,33 +305,6 @@ export default function Home() {
         console.error('Failed to initialize socket:', err);
         setError('Failed to initialize the game. Please refresh the page.');
         setLoading(false);
-      }
-    };
-
-    // Fetch game state
-    const fetchGameState = async () => {
-      try {
-        console.log('Fetching initial game state');
-        const response = await axios.get('/api/game-state');
-        
-        if (response.data) {
-          console.log('Game state response:', response.data);
-          const { active, startTime, endTime: gameEndTime, isPaused: gamePaused, pausedTimeRemaining: gamePausedTime } = response.data;
-          
-          setIsGameActive(active);
-          
-          if (gameEndTime) {
-            setEndTime(new Date(gameEndTime));
-          }
-          
-          setIsPaused(gamePaused);
-          
-          if (gamePausedTime) {
-            setPausedTimeRemaining(gamePausedTime);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching game state:', err);
       }
     };
 

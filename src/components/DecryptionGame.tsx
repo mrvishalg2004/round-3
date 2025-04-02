@@ -534,10 +534,10 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     // Initial fetch
     fetchGameStatusFromAPI();
     
-    // Set up polling interval
+    // Set up polling interval - poll more frequently on Netlify
     const interval = setInterval(() => {
       fetchGameStatusFromAPI();
-    }, 10000); // Poll every 10 seconds
+    }, 5000); // Poll every 5 seconds instead of 10
     
     return () => clearInterval(interval);
   }, [teamName, isServerless]);
@@ -609,6 +609,13 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
         return false;
       }}
     >
+      {isServerless && (
+        <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg" role="alert">
+          <p className="font-medium">Limited Real-time Mode</p>
+          <p className="text-sm">Running on Netlify serverless environment. Game updates may be delayed by a few seconds.</p>
+        </div>
+      )}
+
       {isDisqualified ? (
         <div className="bg-red-100 border-2 border-red-400 text-red-800 px-6 py-5 rounded-lg mb-6 text-center">
           <p className="text-xl font-semibold mb-2">⚠️ You have been disqualified!</p>
