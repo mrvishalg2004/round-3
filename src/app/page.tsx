@@ -85,39 +85,43 @@ export default function Home() {
     
     const initSocket = () => {
       try {
-        // Get the window location for dynamic socket connection
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || `${protocol}//${host}`;
+        // Use the environment variable directly
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || window.location.origin;
         
         console.log(`Connecting to socket at: ${socketUrl}`);
         
-        // Create socket connection with basic settings first
+        // Create socket connection with clear debug options
         const socketInstance = io(socketUrl, {
           query: { teamName },
           path: '/api/socketio',
           transports: ['polling', 'websocket'], // Start with polling, upgrade to websocket
           timeout: 10000,
-          autoConnect: true
+          reconnectionAttempts: 5,
+          reconnectionDelay: 1000,
+          autoConnect: true,
         });
 
-        // Set connection timeout
+        // Set connection timeout with visual feedback
         socketConnectTimeout = setTimeout(() => {
           if (!socketInstance.connected) {
-            console.log('Socket connection timeout, falling back to long polling');
-            // Recreate socket with polling only
+            console.log('Socket connection timeout after 8 seconds - trying to reconnect');
+            // Update UI to show reconnection attempt
+            setError('Connection timeout. Trying to reconnect...');
+            
+            // Force reconnect
             socketInstance.disconnect();
+            socketInstance.connect();
             
-            const fallbackSocket = io(socketUrl, {
-              query: { teamName },
-              path: '/api/socketio',
-              transports: ['polling'], // Polling only as fallback
-              timeout: 20000
-            });
-            
-            setupSocketHandlers(fallbackSocket);
+            // Set another timeout for final failure
+            setTimeout(() => {
+              if (!socketInstance.connected) {
+                console.log('Socket connection failed after retry');
+                setError('Connection error. Please refresh the page and try again.');
+                setLoading(false);
+              }
+            }, 5000);
           }
-        }, 5000);
+        }, 8000);
 
         setupSocketHandlers(socketInstance);
         
@@ -133,19 +137,22 @@ export default function Home() {
             socket.emit('joinTeam', { teamName });
             console.log('Joined team room:', teamName);
             
-            // Get current game state
+            // Explicitly request game status after connection
+            socket.emit('getGameStatus');
+            console.log('Requested game status from server');
+            
+            // Get current game state from API as backup
             fetchGameState();
           });
 
           socket.on('connect_error', (err) => {
             console.error('Socket connection error:', err.message);
-            clearTimeout(socketConnectTimeout);
             
-            // Set error after a delay
+            // Only show error after a delay
             setTimeout(() => {
               if (!socket.connected) {
                 console.log('Socket still not connected after delay');
-                setError('Connection error. Please check your internet connection and try again.');
+                setError(`Connection error: ${err.message}. Please check that the server is running.`);
                 setLoading(false);
               }
             }, 3000);
@@ -153,7 +160,7 @@ export default function Home() {
 
           socket.on('disconnect', (reason) => {
             console.log('Socket disconnected:', reason);
-            if (reason === 'io server disconnect') {
+            if (reason === 'io server disconnect' || reason === 'transport close') {
               socket.connect();
             }
           });
@@ -161,6 +168,22 @@ export default function Home() {
           socket.on('error', (err) => {
             console.error('Socket error:', err);
             setError('Connection error. Please refresh the page.');
+          });
+
+          socket.on('reconnect', (attemptNumber) => {
+            console.log(`Socket reconnected after ${attemptNumber} attempts`);
+            setError(null);
+            socket.emit('joinTeam', { teamName });
+            socket.emit('getGameStatus');
+          });
+
+          socket.on('reconnect_error', (err) => {
+            console.error('Socket reconnection error:', err);
+          });
+
+          socket.on('reconnect_failed', () => {
+            console.error('Socket reconnection failed');
+            setError('Failed to reconnect to the game server. Please refresh the page.');
           });
 
           socket.on('gameStatusChange', (data) => {
