@@ -36,35 +36,39 @@ export default function Home() {
         
         console.log(`Connecting to socket at: ${socketUrl}`);
         
-        // Create socket connection with fallback options
+        // Create socket connection with optimized settings
         const socketInstance = io(socketUrl, {
           query: { teamName },
           path: '/api/socketio',
-          reconnectionAttempts: 5,
+          reconnectionAttempts: 3,
           reconnectionDelay: 1000,
-          reconnectionDelayMax: 5000,
-          timeout: 20000,
-          transports: ['polling', 'websocket']
+          reconnectionDelayMax: 3000,
+          timeout: 10000,
+          transports: ['websocket', 'polling'],
+          autoConnect: true,
+          forceNew: true,
+          upgrade: true,
+          rememberUpgrade: true,
+          multiplex: false
         });
 
         // Handle socket events
         socketInstance.on('connect', () => {
           console.log('Socket connected:', socketInstance.id);
           setSocket(socketInstance);
-          setError(null); // Clear any connection errors
-          setLoading(false); // Set loading to false when socket connects
+          setError(null);
+          setLoading(false);
         });
 
         socketInstance.on('connect_error', (err) => {
           console.error('Socket connection error:', err.message);
           setError('Connection error. Real-time updates may not be available.');
-          setLoading(false); // Set loading to false even on error
+          setLoading(false);
         });
 
         socketInstance.on('disconnect', (reason) => {
           console.log('Socket disconnected:', reason);
           if (reason === 'io server disconnect') {
-            // Server initiated disconnect, try to reconnect
             socketInstance.connect();
           }
         });
@@ -89,16 +93,14 @@ export default function Home() {
             }
           } else if (data.type === 'start') {
             setIsGameActive(true);
-            setIsGameOver(false); // Make sure game over is reset when game starts
+            setIsGameOver(false);
             if (data.endTime) {
               setEndTime(new Date(data.endTime));
             }
             setIsPaused(false);
           } else if (data.type === 'stop' || data.type === 'reset') {
-            setIsGameActive(false); // Just mark game as inactive
-            // Do NOT set isGameOver to true here
+            setIsGameActive(false);
           } else if (data.type === 'gameComplete' || data.type === 'end') {
-            // Only set isGameOver when the game is truly over (all winners found)
             setIsGameOver(true);
           }
         });
@@ -143,7 +145,6 @@ export default function Home() {
           setEmail(savedEmail);
           setEnrolled(true);
           
-          // Join the team room
           socketInstance.emit('joinTeam', { teamName: savedTeamName });
           console.log('Joined team room:', savedTeamName);
         }
@@ -177,9 +178,6 @@ export default function Home() {
           if (gamePausedTime) {
             setPausedTimeRemaining(gamePausedTime);
           }
-          
-          // Don't automatically set game over if the game is inactive
-          // We only want game over state when explicitly triggered
         }
       } catch (err) {
         console.error('Error fetching game state:', err);
