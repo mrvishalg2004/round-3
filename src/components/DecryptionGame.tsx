@@ -266,9 +266,9 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       
       // Update game status for any state change
       setGameStatus(prev => {
-        if (!prev) return {
-          gameIsFull: false,
-          winnersCount: 0,
+        const newStatus = {
+          gameIsFull: prev?.gameIsFull || false,
+          winnersCount: prev?.winnersCount || 0,
           active: data.active,
           isPaused: data.isPaused,
           endTime: data.endTime ? new Date(data.endTime) : null,
@@ -276,52 +276,52 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
           pausedTimeRemaining: data.pausedTimeRemaining
         };
         
-        return {
-          ...prev,
-          active: data.active,
-          endTime: data.endTime ? new Date(data.endTime) : null,
-          isPaused: data.isPaused,
-          remainingTime: data.remainingTime,
-          pausedTimeRemaining: data.pausedTimeRemaining
-        };
+        // If game becomes active, set initialized and fetch message
+        if (data.active && (!prev || !prev.active)) {
+          setIsGameInitialized(true);
+          setLoading(false);
+          fetchMessage();
+        }
+        
+        return newStatus;
       });
-      
-      // Set game as initialized when we receive any state
-      setIsGameInitialized(true);
-      setLoading(false);
-      
-      // If game is active, fetch the message
-      if (data.active) {
-        fetchMessage();
-      }
     });
 
     // Initial game state fetch
     const fetchInitialState = async () => {
       try {
         const response = await axios.get('/api/game-state');
-        const gameState = response.data.gameState;
+        const gameState = response.data;
         
         console.log('Initial game state:', gameState);
         
-        // Set initial game status
-        setGameStatus({
-          gameIsFull: false,
-          winnersCount: 0,
-          active: gameState.active,
-          isPaused: gameState.isPaused,
-          endTime: gameState.endTime ? new Date(gameState.endTime) : null,
-          remainingTime: gameState.remainingTime,
-          pausedTimeRemaining: gameState.pausedTimeRemaining
-        });
-        setIsGameInitialized(true);
-        
-        // If game is active, fetch the message
         if (gameState.active) {
+          // Game is already active, set state and fetch message
+          setGameStatus({
+            gameIsFull: false,
+            winnersCount: 0,
+            active: true,
+            isPaused: gameState.isPaused,
+            endTime: gameState.endTime ? new Date(gameState.endTime) : null,
+            remainingTime: gameState.remainingTime,
+            pausedTimeRemaining: gameState.pausedTimeRemaining
+          });
+          setIsGameInitialized(true);
           await fetchMessage();
         } else {
-          setLoading(false);
+          // Game is not active, just set initialized state
+          setGameStatus({
+            gameIsFull: false,
+            winnersCount: 0,
+            active: false,
+            isPaused: false,
+            endTime: null,
+            remainingTime: null,
+            pausedTimeRemaining: undefined
+          });
+          setIsGameInitialized(true);
         }
+        setLoading(false);
       } catch (error) {
         console.error('Error fetching initial game state:', error);
         setError('Failed to fetch game state. Please refresh the page.');
@@ -329,6 +329,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
       }
     };
 
+    // Fetch initial state immediately
     fetchInitialState();
 
     return () => {
@@ -490,7 +491,7 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
   }, [gameStatus?.active, isPaused, handleSecurityViolation]);
 
   // Update the loading state check
-  if (loading && !isGameInitialized) {
+  if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
@@ -502,8 +503,8 @@ const DecryptionGame: React.FC<DecryptionGameProps> = ({
     );
   }
 
-  // Show waiting screen only when game is not initialized or explicitly not active
-  if (!isGameInitialized || (gameStatus && !gameStatus.active)) {
+  // Show waiting screen when game is not active
+  if (!gameStatus?.active) {
     return (
       <div className="py-8">
         <div className="bg-yellow-100 border-2 border-yellow-400 text-yellow-800 px-6 py-5 rounded-lg mb-6 text-center">
