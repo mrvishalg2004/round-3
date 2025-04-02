@@ -69,13 +69,11 @@ export default function Home() {
 
         socketInstance.on('connect_error', (err) => {
           console.error('Socket connection error:', err.message);
-          setError('Connection error. Please check your internet connection and try again.');
-          setLoading(false);
-          
-          // Attempt to reconnect after a delay
+          // Don't set error immediately, try to reconnect first
           setTimeout(() => {
             if (!socketInstance.connected) {
-              socketInstance.connect();
+              setError('Connection error. Please check your internet connection and try again.');
+              setLoading(false);
             }
           }, 2000);
         });
@@ -249,6 +247,29 @@ export default function Home() {
             upgrade: true,
             rememberUpgrade: true,
             multiplex: false
+          });
+          
+          // Set up connection event handlers
+          socketInstance.on('connect', () => {
+            console.log('Socket connected after enrollment:', socketInstance.id);
+            setSocket(socketInstance);
+            setError(null);
+            setLoading(false);
+            
+            // Join team room after successful connection
+            socketInstance.emit('joinTeam', { teamName: newTeamName });
+            console.log('Joined team room after enrollment:', newTeamName);
+          });
+          
+          socketInstance.on('connect_error', (err) => {
+            console.error('Socket connection error after enrollment:', err.message);
+            // Don't set error immediately, try to reconnect first
+            setTimeout(() => {
+              if (!socketInstance.connected) {
+                setError('Connection error. Please check your internet connection and try again.');
+                setLoading(false);
+              }
+            }, 2000);
           });
           
           setSocket(socketInstance);
