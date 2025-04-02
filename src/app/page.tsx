@@ -25,7 +25,10 @@ export default function Home() {
 
   // Initialize socket connection
   useEffect(() => {
-    if (!teamName) return;
+    if (!teamName) {
+      setLoading(false); // No need to load if not enrolled
+      return;
+    }
 
     const initSocket = async () => {
       try {
@@ -243,7 +246,7 @@ export default function Home() {
   };
 
   // Loading state
-  if (loading) {
+  if (loading && !enrolled) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
